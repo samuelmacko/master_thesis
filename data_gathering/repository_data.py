@@ -1,23 +1,32 @@
 
-from datetime import datetime
-import os
-from typing import List
+from datetime import datetime, timedelta
+from math import ceil
+from os import path
+from re import compile
+from typing import Any, List, Optional, Set, Union
+from yaml import safe_load
 
 from dateutil.relativedelta import relativedelta
 from github import Github
 from github.GithubException import UnknownObjectException
+from github.NamedUser import NamedUser
 from github.Repository import Repository
 
 from .enums import AccountType
 
 
-_GITHUB_ACCESS_TOKEN = os.getenv('GITHUB_ACCESS_TOKEN')
-
-
 class RepositoryData:
 
-    def __init__(self, url: str) -> None:
-        self._git: Github = Github(login_or_token=_GITHUB_ACCESS_TOKEN)
+    def __init__(self, git: Github) -> None:
+        self._git: Github = git
+        self._repo: Optional[Repository] = None
+
+    @property
+    def repo(self) -> Repository:
+        return self._repo
+
+    @repo.setter
+    def repo(self, url: str) -> None:
         self._repo: Repository = self._git.get_repo(full_name_or_id=url)
 
     def pulls_count(self, state: str = 'open', weeks: int = 104) -> int:
@@ -32,7 +41,7 @@ class RepositoryData:
             raise ValueError('Wrong value for state')
 
         counter = 0
-        threshold_date = self.threshold_date(weeks=weeks)
+        threshold_date = self.threshold_datetime(weeks=weeks)
         for pull in pulls:
             if pull.created_at < threshold_date:
                 counter += 1
@@ -45,41 +54,48 @@ class RepositoryData:
             raise ValueError('Wrong value for state')
 
         counter = 0
-        threshold_date = self.threshold_date(weeks=weeks)
+        threshold_date = self.threshold_datetime(weeks=weeks)
         for issue in issues:
             if issue.created_at < threshold_date:
                 counter += 1
         return counter
 
     def commits_count(self, weeks: int = 104) -> int:
-        threshold_date = self.threshold_date(weeks=weeks)
+        threshold_date = self.threshold_datetime(weeks=weeks)
         return self._repo.get_commits(since=threshold_date).totalCount
 
     def branches_count(self) -> int:
-        return len(self._repo.get_branches())
+        return self._repo.get_branches().totalCount
 
     def releases_count(self, weeks: int = 104) -> int:
         releases = self._repo.get_releases()
         counter = 0
-        threshold_date = self.threshold_date(weeks=weeks)
+        threshold_date = self.threshold_datetime(weeks=weeks)
         for release in releases:
             if release.created_at < threshold_date:
                 counter += 1
         return counter
 
-    def threshold_date(self, weeks: int = 104) -> datetime:
+    def threshold_datetime(self, weeks: int = 104) -> datetime:
         if weeks == 0:
             date = self._repo.created_at
         else:
             date = datetime.now().date() - relativedelta(weeks=weeks)
         return datetime.combine(date, datetime.min.time())
 
+    def threshold_date(self, weeks: int = 104) -> datetime:
+        if weeks == 0:
+            date = self._repo.created_at
+        else:
+            date = datetime.now().date() - relativedelta(weeks=weeks)
+        return date
+
     def owner_type(self) -> AccountType:
         owner_type = self._repo.owner.type
         if owner_type == 'Organization':
-            return AccountType.Organization
+            return AccountType.Organization.value
         elif owner_type == 'User':
-            return AccountType.User
+            return AccountType.User.value
         else:
             raise ValueError('Unsupported account type')
 
@@ -94,11 +110,11 @@ class RepositoryData:
 
     def age(self) -> int:
         present_date = datetime.now().date()
-        created_date = self._repo.created_at
+        created_date = self._repo.created_at.date()
         return (present_date - created_date).days
 
     def max_days_without_commit(self, weeks: int = 104) -> int:
-        threshold_date = self.threshold_date(weeks=weeks)
+        threshold_date = self.threshold_datetime(weeks=weeks)
         commits = self._repo.get_commits(since=threshold_date)
         max_days = 0
         prev_commit = commits[0]
@@ -129,7 +145,7 @@ class RepositoryData:
         return collective_age / contributors.totalCount
 
     def documentation_changes_frequency(self, weeks: int = 104) -> float:
-        threshold_date = self.threshold_date(weeks=weeks)
+        threshold_date = self.threshold_datetime(weeks=weeks)
         commits = list(self._repo.get_commits(since=threshold_date))
         counter = 0
         for commit in commits:
@@ -141,7 +157,7 @@ class RepositoryData:
         return counter / len(commits)
 
     def documentation_changes_additions(self, weeks: int = 104) -> float:
-        threshold_date = self.threshold_date(weeks=weeks)
+        threshold_date = self.threshold_datetime(weeks=weeks)
         commits = list(self._repo.get_commits(since=threshold_date))
         counter = 0
         additions = 0
@@ -152,28 +168,49 @@ class RepositoryData:
                     counter += 1
                     additions += file.additions - file.deletions
 
+        if counter == 0:
+            return 0
         return additions / counter
 
+    @staticmethod
+    def _filter_dirs(dirs: List[str]) -> List[str]:
+        with open('configs/vendor.yml', 'r') as vendor_file:
+            vendor_regexes = safe_load(vendor_file)
+        regexes = [compile(regex) for regex in vendor_regexes]
+        for dir in dirs:
+            if any([rgx.match(dir) for rgx in regexes]):
+                dirs.remove(dir)
+        return dirs
+
     def _get_dirs(self) -> List[str]:
-        dirs = [
+        dirs = self._filter_dirs(dirs=[
             dir.path for dir in self._repo.get_contents(path='')
             if dir.type == 'dir'
-        ]
+        ])
         if len(dirs) == 0:
             return dirs
 
         i = 0
         while i < len(dirs):
-            subdirs = [
+            subdirs = self._filter_dirs(dirs=[
                 dir.path for dir in self._repo.get_contents(path=dirs[i])
                 if dir.type == 'dir'
-            ]
+            ])
             dirs += subdirs
             i += 1
         return dirs
 
+    def _get_files(self) -> List[str]:
+        files = []
+        for dir in self._get_dirs():
+            files.extend([
+                file.path for file in self._repo.get_contents(path=dir)
+                if file.type == 'file'
+            ])
+        return files
+
     def _has_file(self, file_names: List[str]) -> bool:
-        files = [os.path.basename(file) for file in self._get_dirs()]
+        files = [path.basename(file) for file in self._get_dirs()]
         for file in file_names:
             if file.lower() in files:
                 return True
@@ -197,7 +234,7 @@ class RepositoryData:
         except UnknownObjectException:
             return False
 
-    def owners_projects_count(self) -> int:
+    def owner_projects_count(self) -> int:
         repos = self._repo.owner.public_repos
         return repos if repos else 0
 
@@ -207,14 +244,14 @@ class RepositoryData:
     def owner_followers(self) -> int:
         return self._repo.owner.followers
 
-    def devs_followers_avg_count(self) -> float:
+    def devs_followers_avg(self) -> float:
         contributors = self._repo.get_contributors()
         count = 0
         for contributor in contributors:
             count += contributor.followers
         return count / contributors.totalCount
 
-    def devs_following_avg_count(self) -> float:
+    def devs_following_avg(self) -> float:
         contributors = self._repo.get_contributors()
         count = 0
         for contributor in contributors:
@@ -222,4 +259,181 @@ class RepositoryData:
         return count / contributors.totalCount
 
     def commits_by_dev_with_most_commits(self) -> int:
-        return 0
+        commits = self._repo.get_commits()
+        contr_dict = {}
+        for commit in commits:
+            name = commit.commit.author.name
+            if name in contr_dict:
+                contr_dict[name] += 1
+            else:
+                contr_dict[name] = 1
+
+        max_contriburor = max(contr_dict, key=contr_dict.get)
+        return contr_dict[max_contriburor]
+
+    def _contributors_divided(self, threshold: int = 104) -> Union[Set[str], Set[str]]:
+        threshold_date = self.threshold_datetime(weeks=threshold)
+        commits_before = self._repo.get_commits(until=threshold_date)
+        commits_after = self._repo.get_commits(since=threshold_date)
+        contributors_old = set()
+        contributors_new = set()
+        for commit in commits_before:
+            name = commit.commit.author.name
+            if name not in contributors_old:
+                contributors_old.add(name)
+
+        for commit in commits_after:
+            name = commit.commit.author.name
+            if name not in contributors_old:
+                contributors_new.add(name)
+
+        return contributors_new, contributors_old
+
+    def magneticness(self, threshold: int = 104) -> float:
+        new, old = self._contributors_divided(threshold=threshold)
+        if len(old) == 0:
+            return 0
+        return len(new) / len(old)
+
+    @staticmethod
+    def _days_to_datetime(days: int):
+        date = datetime.now().date() - timedelta(days=days)
+        return datetime.combine(date, datetime.min.time())
+
+    def stickiness(
+            self, new_threshold: int = 104, sticky_threshold: int = 52
+    ) -> float:
+        new, _ = self._contributors_divided(threshold=new_threshold)
+        commits_after = self._repo.get_commits(
+            since=self._days_to_datetime(sticky_threshold)
+        )
+        contributors_sticked = set()
+
+        for commit in commits_after:
+            if commit.author.login not in new:
+                contributors_sticked.add(commit.author.login)
+
+        return len(contributors_sticked) / len(new)
+
+    def _contributor_joined_datetime(
+            self, contributor: NamedUser
+    ) -> Optional[datetime]:
+        commits = self._repo.get_commits()
+        for commit in commits.reversed:
+            if commit.author == contributor:
+                return commit.commit.author.date
+        return None
+
+    # not used - too much computation time
+    def health(self) -> float:
+        contributors = self._repo.get_contributors()
+        cont_workforces = []
+        for contributor in contributors:
+            cont_date = self._contributor_joined_datetime(
+                contributor=contributor
+            )
+            if not cont_date:
+                raise ValueError('Some error')
+            e = self.datetime_to_days(dtime=cont_date) / 30
+            labor = 0.0
+            j = 0
+            workforce = 0.0
+            since_date = cont_date
+            until_date = cont_date + timedelta(days=30)
+            today = datetime.now()
+
+            commits = list(self._repo.get_commits())
+
+            while until_date < today:
+                for commit in commits:
+                    added = datetime.strptime(
+                        commit.last_modified, '%a, %d %b %Y %H:%M:%S GMT'
+                    )
+                    if since_date < added < until_date:
+                        additions = commit.stats.additions
+                        deletions = commit.stats.deletions
+                        labor += additions - deletions
+
+                j += 1
+                since_date = until_date
+                until_date += timedelta(days=30)
+
+                workforce += labor / (e - j + 1)
+
+            cont_workforces.append(workforce)
+        # return median(cont_workforces)
+        return sum(cont_workforces) / len(cont_workforces)
+
+    def wealth(self, weeks: int = 104) -> float:
+        threshold_date = self.threshold_datetime(weeks=weeks)
+        prs = self._repo.get_pulls(state='closed')
+        relevant_prs = [pr for pr in prs if pr.created_at > threshold_date]
+        wealth = 0.0
+        for pr in relevant_prs:
+            days_to_close = (pr.closed_at - pr.created_at).days
+            if days_to_close == 0:
+                days_to_close = 1
+            months_to_close = ceil(days_to_close / 30)
+            wealth += 1 / months_to_close
+        return wealth
+
+    def unmaintained_in_readme(self) -> bool:
+        keywords_list = [
+            'deprecated', 'unmaintained', 'no longer maintained',
+            'no longer supported', 'no longer under development',
+            'not maintained', 'not under development', 'obsolete', 'archived'
+        ]
+        if self.has_readme():
+            readme = self._repo.get_readme().decoded_content.decode("utf-8")
+            return any(keyword in readme for keyword in keywords_list)
+
+    def in_programming_language(self) -> bool:
+        repo_languages = self._repo.get_languages()
+        with open('configs/languages.yml', 'r') as languages_file:
+            all_languages = safe_load(languages_file)
+
+        return any(
+            all_languages[language]['type'] == 'programming'
+            for language in repo_languages
+        )
+
+    def incorrectly_migrated(self) -> bool:
+        commits = list(self._repo.get_commits())
+        if len(commits) < 20:
+            raise ValueError('Insufficient number of commits')
+
+        files = self._get_files()
+        original_size = len(files)
+
+        for i in range(20):
+            for file in commits[i].files:
+                if file.status == 'added':
+                    if file.filename in files:
+                        files.remove(file.filename)
+
+        new_size = len(files)
+        return new_size < (original_size / 2)
+
+    def suitable(self, unmaintained: bool = False) -> bool:
+        if self.age() < 730:
+            return False
+        if not self.in_programming_language():
+            return False
+        if self.unmaintained_in_readme():
+            if not unmaintained:
+                return False
+        if self.incorrectly_migrated():
+            return False
+        return True
+
+    def repo_name(self) -> str:
+        return self._repo.full_name
+
+    def url(self) -> str:
+        return self._repo.html_url
+
+    def get_row(self, features: List[str]) -> List[Any]:
+        row = []
+        for feature in features:
+            row.append(getattr(self, feature)())
+        return row

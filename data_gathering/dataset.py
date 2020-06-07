@@ -1,47 +1,50 @@
 
 import csv
-from typing import Any, List, Optional
+from os import getenv
+from pathlib import Path
+from typing import Any, List
+from yaml import safe_load
+
+from github import Github
 
 from .repository_data import RepositoryData
 
-import pandas as pd
+
+_GITHUB_ACCESS_TOKEN = getenv('GITHUB_ACCESS_TOKEN')
 
 
 class Dataset:
 
     def __init__(
-            self, links_file_name: str, headers: List[str]
+            self, links_file_name: str, features_file: str,
+            last_visited_node: int = 0
     ) -> None:
+        self._git: Github = Github(login_or_token=_GITHUB_ACCESS_TOKEN)
         self.links_file_name: str = links_file_name
-        # self.headers = headers
-        # self.data_raw: Optional[List[List[Any]]] = None
-        # self.data_df: Optional[pd.DataFrame] = None
+        self.features: List[Any] = self.load_features(
+            features_file=features_file
+        )
+        self.last_visited_node = last_visited_node
 
-    # def compile_data(
-    #         self, size_limit: int = 10, age_limit: int = 10,
-    #         contributors_limit: int = 5, pull_last_age_limit: int = 5
-    # ) -> None:
-    #     with open(self.links_file_name, 'r') as file:
-    #         for link in file.readlines():
-    #             rd = RepositoryData(url=link)
-    #             if (
-    #                     rd.size > size_limit and
-    #                     rd.age > age_limit and
-    #                     rd.contributors_count > contributors_limit and
-    #                     rd.pull_last_age > pull_last_age_limit
-    #             ):
-    #                 dataset_line = []
-    #                 # TODO append all the relevant data to the dataset_line
-    #
-    #                 self.data_raw.append(dataset_line)
+    @staticmethod
+    def load_features(features_file: str) -> List[str]:
+        with open(features_file, 'r') as f:
+            return safe_load(f)
 
-    def create_df(self) -> None:
-        if self.data_raw is None:
-            raise ValueError('Dataset is empty')
-        self.data_df = pd.DataFrame(self.data_raw, columns=self.headers)
+    def write_to_csv(self, data: List[str]) -> None:
+        if not Path(self.links_file_name).is_file():
+            with open(self.links_file_name, 'w') as f:
+                writer = csv.writer(f, delimiter=',')
+                writer.writerow(self.features)
+        with open(self.links_file_name, 'a') as f:
+            writer = csv.writer(f, delimiter=',')
+            data = [str(col) for col in data]
+            writer.writerow(data)
 
-    def export_csv(self, file_name: str = None) -> None:
-        with open(file_name or 'dataset.csv', 'w') as file:
-            writer = csv.writer(file, delimeter=',')
-            writer.writerow(self.headers)
-            writer.writerows(self.data_raw)
+    def search_repos(self) -> None:
+        repos = self._git.get_repos(since=self.last_visited_node)
+        repo_data = RepositoryData(git=self._git)
+        for repo in repos:
+            repo_data.repo = repo.full_name
+            if repo_data.suitable():
+                self.write_to_csv(repo_data.get_row(features=self.features))
