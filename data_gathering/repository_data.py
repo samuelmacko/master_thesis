@@ -21,13 +21,11 @@ class RepositoryData:
         self._git: Github = git
         self._repo: Optional[Repository] = None
 
-    @property
-    def repo(self) -> Repository:
-        return self._repo
-
-    @repo.setter
-    def repo(self, url: str) -> None:
-        self._repo: Repository = self._git.get_repo(full_name_or_id=url)
+    def set_repo(self, name: str = None, repo: Repository = None) -> None:
+        if name:
+            self._repo = self._git.get_repo(full_name_or_id=name)
+        if repo:
+            self._repo = repo
 
     def pulls_count(self, state: str = 'open', weeks: int = 104) -> int:
         if state == 'open' or state == 'closed':
@@ -414,17 +412,23 @@ class RepositoryData:
         new_size = len(files)
         return new_size < (original_size / 2)
 
-    def suitable(self, unmaintained: bool = False) -> bool:
-        if self.age() < 730:
-            return False
-        if not self.in_programming_language():
-            return False
-        if self.unmaintained_in_readme():
-            if not unmaintained:
+    def archived(self) -> bool:
+        return self._repo.archived
+
+    def suitable(self) -> bool:
+        try:
+            if self.age() < 730:
                 return False
-        if self.incorrectly_migrated():
+            if not self.in_programming_language():
+                return False
+            if self.incorrectly_migrated():
+                return False
+        except ValueError:
             return False
         return True
+
+    def unmaintained(self) -> bool:
+        return self.unmaintained_in_readme() or self.archived()
 
     def repo_name(self) -> str:
         return self._repo.full_name

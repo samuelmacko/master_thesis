@@ -1,3 +1,5 @@
 
-last_visited_node: 0
 csv_file_name: 'filler.csv'
+maintained_ids: 'data_gathering/maintained_ids.dat'
+unmaintained_ids: 'data_gathering/unmaintained_ids.dat'
+not_suitable_ids: 'data_gathering/not_suitable_ids.dat'
