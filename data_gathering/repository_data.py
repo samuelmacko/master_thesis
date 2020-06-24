@@ -21,12 +21,16 @@ class RepositoryData:
         self._git: Github = git
         self._repo: Optional[Repository] = None
 
-    def set_repo(self, name: str = None, repo: Repository = None) -> None:
-        if name:
-            self._repo = self._git.get_repo(full_name_or_id=name)
+    def set_repo(self, repo_id: str = None, repo: Repository = None) -> None:
+        if repo_id:
+            self._repo = self._git.get_repo(full_name_or_id=repo_id)
         if repo:
             self._repo = repo
 
+# TODO pri kazdej metode kde je weeks treba poriesit ako to bude s repami co
+# mali posledny commit napr pred 4 rokmi
+# a) od posledneho commitu?
+# b) kaslat na to a brat to od dneska -> vyhovujucich rep bude len velmi malo
     def pulls_count(self, state: str = 'open', weeks: int = 104) -> int:
         if state == 'open' or state == 'closed':
             pulls = self._repo.get_pulls(state=state)
@@ -113,7 +117,7 @@ class RepositoryData:
 
     def max_days_without_commit(self, weeks: int = 104) -> int:
         threshold_date = self.threshold_datetime(weeks=weeks)
-        commits = self._repo.get_commits(since=threshold_date)
+        commits = list(self._repo.get_commits(since=threshold_date))
         max_days = 0
         prev_commit = commits[0]
         for commit in commits[1:]:
@@ -415,6 +419,11 @@ class RepositoryData:
     def archived(self) -> bool:
         return self._repo.archived
 
+    def commit_in_weeks(self, weeks: int = 104) -> bool:
+        threshold_date = self.threshold_datetime(weeks=weeks)
+        commits = list(self._repo.get_commits(since=threshold_date))
+        return bool(len(commits))
+
     def suitable(self) -> bool:
         try:
             if self.age() < 730:
@@ -428,7 +437,8 @@ class RepositoryData:
         return True
 
     def unmaintained(self) -> bool:
-        return self.unmaintained_in_readme() or self.archived()
+        return self.unmaintained_in_readme() or self.archived() or \
+               not self.commit_in_weeks()
 
     def repo_name(self) -> str:
         return self._repo.full_name

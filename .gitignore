@@ -1,4 +1,7 @@
 .*
 !/.gitignore
 __pycache__/
-
+*.log
+*.dat
+*.csv
+*.code-workspace
