@@ -68,3 +68,30 @@ or
 ```
 docker run --env-file ./env_file -t thesis_app:latest
 ```
+
+### Running in an OpenShift cluster
+
+First, log in into your OpenShift cluster:
+
+```
+oc login <cluster>
+```
+
+Next, select project in which the application should run:
+
+```
+oc project <my-project-name>
+```
+
+And finally, process the OpenShift template that will create a build config,
+image stream and a job. The build config will build the image from the current master branch:
+
+```
+oc process -f openshift.yaml -p GITHUB_ACCESS_TOKEN=<token? -p AWS_ACCESS_KEY_ID=<key-id> -p AWS_SECRET_ACCESS_KEY=<access-key> | oc apply -f -
+```
+
+To clean up objects created:
+
+```
+oc delete bc,is,job -l app=samuelmacko-master-thesis
+```
