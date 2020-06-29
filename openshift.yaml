@@ -1,0 +1,93 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: samuelmacko-master-thesis
+  annotations:
+    description: "samuelmacko-master-thesis"
+    version: 0.0.1
+  labels:
+    app: samuelmacko-master-thesis
+
+parameters:
+  - name: GITHUB_ACCESS_TOKEN
+    required: true
+    description: An access token for GitHub.
+
+  - name: AWS_ACCESS_KEY_ID
+    required: true
+    description: An AWS S3 access key id.
+
+  - name: AWS_SECRET_ACCESS_KEY
+    required: true
+    description: An AWS S3 secret access key.
+
+objects:
+  - apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: samuelmacko-master-thesis
+      labels:
+        app: samuelmacko-master-thesis
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: samuelmacko-master-thesis
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          containers:
+            - name: main
+              image: samuelmacko-master-thesis
+              env:
+                - name: GITHUB_ACCESS_TOKEN
+                  value: "${GITHUB_ACCESS_TOKEN}"
+                - name: AWS_ACCESS_KEY_ID
+                  value: "${AWS_ACCESS_KEY_ID}"
+                - name: AWS_SECRET_ACCESS_KEY
+                  value: "${AWS_SECRET_ACCESS_KEY}"
+              resources:
+                limits:
+                  memory: "4Gi"
+                  cpu: 1
+                requests:
+                  memory: "4Gi"
+                  cpu: 1
+  - kind: ImageStream
+    apiVersion: image.openshift.io/v1
+    metadata:
+      labels:
+        app: samuelmacko-master-thesis
+      name: samuelmacko-master-thesis
+    spec:
+      name: latest
+      lookupPolicy:
+        local: true
+
+  - kind: BuildConfig
+    apiVersion: build.openshift.io/v1
+    metadata:
+      name: samuelmacko-master-thesis
+      labels:
+        app: samuelmacko-master-thesis
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: samuelmacko-master-thesis:latest
+      source:
+        type: Git
+        git:
+          uri: https://github.com/samuelmacko/master_thesis
+          ref: master
+      resources:
+        limits:
+          memory: 1Gi
+          cpu: 1
+        requests:
+          memory: 1Gi
+          cpu: 1
+      strategy:
+        dockerStrategy:
+          dockerfilePath: Dockerfile.search_repos
