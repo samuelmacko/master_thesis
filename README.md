@@ -35,7 +35,6 @@ User is expected to configure data gathering part through [configuration file](c
 | unmaintained_csv_file | Path to .csv file where computed features of unmaintained repositories will be stored |
 | features_file | Path to .yaml file with list of features to compute |
 | s3_region | name of the region for [S3](https://aws.amazon.com/s3/) bucket |
-| s3_bucket_name | name of the [S3](https://aws.amazon.com/s3/) bucket |
 
 ### Running in a container
 
@@ -53,14 +52,16 @@ Container expects these environmental variables.
 
 | Name | Description |
 | ---- | ----------- |
-| GITHUB_ACCESS_TOKEN | [Github API](https://developer.github.com/v3/) access token to authenticate the user |
 | AWS_ACCESS_KEY_ID | [AWS](https://aws.amazon.com/) access key |
 | AWS_SECRET_ACCESS_KEY | [AWS](https://aws.amazon.com/) secret access key |
+| BUCKET_NAME | name of the [S3](https://aws.amazon.com/s3/) bucket |
+| ENDPOINT_URL | URL of [S3](https://aws.amazon.com/s3/) endpoint |
+| GITHUB_ACCESS_TOKEN | [Github API](https://developer.github.com/v3/) access token to authenticate the user |
 
 Example:
 
 ```
-docker run -e GITHUB_ACCESS_TOKEN -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -t thesis_app:latest
+docker run -e GITHUB_ACCESS_TOKEN -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e ENDPOINT_URL -e BUCKET_NAME -t thesis_app:latest
 ```
 
 or
@@ -87,7 +88,7 @@ And finally, process the OpenShift template that will create a build config,
 image stream and a job. The build config will build the image from the current master branch:
 
 ```
-oc process -f openshift.yaml -p GITHUB_ACCESS_TOKEN=<token? -p AWS_ACCESS_KEY_ID=<key-id> -p AWS_SECRET_ACCESS_KEY=<access-key> | oc apply -f -
+oc process -f openshift.yaml -p GITHUB_ACCESS_TOKEN=<token> -p AWS_ACCESS_KEY_ID=<key-id> -p AWS_SECRET_ACCESS_KEY=<access-key> | oc apply -f -
 ```
 
 To clean up objects created:

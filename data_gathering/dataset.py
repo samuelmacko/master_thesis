@@ -110,40 +110,32 @@ class Dataset:
         )
         logger.info(msg='IDs saved to files')
 
-    def uplad_all(
+    def upload_all(
         self, unmaintained_ids_file: str, maintained_ids_file: str,
-        not_suitable_ids_file: str, bucket_name: str, region_name: str = None
+        not_suitable_ids_file: str, region_name: str = None
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
-        if not s3_handler.bucket_exits_check(bucket_name=bucket_name):
-            s3_handler.create_bucket(name=bucket_name)
+        if not s3_handler.bucket_exits_check():
+            s3_handler.create_bucket()
 
-        s3_handler.upload_file(
-            file_name=unmaintained_ids_file, bucket_name=bucket_name
-        )
+        s3_handler.upload_file(file_name=unmaintained_ids_file)
         s3_handler.delete_oldest_object_with_prefix(
-            prefix=unmaintained_ids_file, bucket_name=bucket_name
+            prefix=unmaintained_ids_file
         )
-        s3_handler.upload_file(
-            file_name=maintained_ids_file, bucket_name=bucket_name
-        )
+        s3_handler.upload_file(file_name=maintained_ids_file)
+        s3_handler.delete_oldest_object_with_prefix(prefix=maintained_ids_file)
+        s3_handler.upload_file(file_name=not_suitable_ids_file)
         s3_handler.delete_oldest_object_with_prefix(
-            prefix=maintained_ids_file, bucket_name=bucket_name
+            prefix=not_suitable_ids_file
         )
-        s3_handler.upload_file(
-            file_name=not_suitable_ids_file, bucket_name=bucket_name
-        )
-        s3_handler.delete_oldest_object_with_prefix(
-            prefix=not_suitable_ids_file, bucket_name=bucket_name
-        )
-        logger.info(msg=f'IDs files uplaoded to the S3 bucket {bucket_name}')
+        logger.info(msg='IDs files uploaded to the S3 bucket')
 
     def search_repos(
             self, from_year: str, to_year: str,
             unmaintained_ids_file: str, maintained_ids_file: str,
             not_suitable_ids_file: str,
             end_condition: EndCondition, value: int,
-            region_name: str, bucket_name: str
+            region_name: str
     ) -> None:
         repo_data = RepositoryData(git=self._git)
         unmaintained_ids = self.load_visited_ids(
@@ -226,11 +218,11 @@ class Dataset:
                 not_suitable_ids_file=not_suitable_ids_file,
                 not_suitable_ids_set=not_suitable_ids
             )
-            self.uplad_all(
+            self.upload_all(
                 unmaintained_ids_file=unmaintained_ids_file,
                 maintained_ids_file=maintained_ids_file,
                 not_suitable_ids_file=not_suitable_ids_file,
-                region_name=region_name, bucket_name=bucket_name
+                region_name=region_name
             )
             logger.info(msg='End of the search')
 
