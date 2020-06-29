@@ -1,13 +1,13 @@
 
-import enum
+from enum import Enum
 
 
-class AccountType(enum.Enum):
+class AccountType(Enum):
     Organization = 0
     User = 1
 
 
-class EndCondition(enum.Enum):
+class EndCondition(Enum):
     Unmaintained = 'unmaintained_ids'
     Maintained = 'maintained_ids'
-    Visited = 'not_suitable_ids'
+    NotSuitable = 'not_suitable_ids'

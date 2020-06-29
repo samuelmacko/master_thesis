@@ -273,7 +273,9 @@ class RepositoryData:
         max_contriburor = max(contr_dict, key=contr_dict.get)
         return contr_dict[max_contriburor]
 
-    def _contributors_divided(self, threshold: int = 104) -> Union[Set[str], Set[str]]:
+    def _contributors_divided(
+        self, threshold: int = 104
+    ) -> Union[Set[str], Set[str]]:
         threshold_date = self.threshold_datetime(weeks=threshold)
         commits_before = self._repo.get_commits(until=threshold_date)
         commits_after = self._repo.get_commits(since=threshold_date)

@@ -17,6 +17,7 @@ from github.GithubException import (
 
 from .enums import EndCondition
 from .repository_data import RepositoryData
+from .s3_handler import S3Handler
 
 
 _GITHUB_ACCESS_TOKEN = getenv('GITHUB_ACCESS_TOKEN')
@@ -29,7 +30,9 @@ file_handler.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 file_handler.setFormatter(fmt=formatter)
 console_handler.setFormatter(fmt=formatter)
 
@@ -67,11 +70,14 @@ class Dataset:
 
     @staticmethod
     def load_visited_ids(dat_file: str) -> Optional[Set[int]]:
-        with open(dat_file, 'rb') as f:
-            try:
-                return load(f)
-            except EOFError:
-                return set()
+        try:
+            with open(dat_file, 'rb') as f:
+                try:
+                    return load(f)
+                except EOFError:
+                    return set()
+        except FileNotFoundError:
+            return set()
 
     @staticmethod
     def id_generator(min_id: int, max_id: int) -> int:
@@ -104,11 +110,40 @@ class Dataset:
         )
         logger.info(msg='IDs saved to files')
 
+    def uplad_all(
+        self, unmaintained_ids_file: str, maintained_ids_file: str,
+        not_suitable_ids_file: str, bucket_name: str, region_name: str = None
+    ) -> None:
+        s3_handler = S3Handler(region_name=region_name)
+        if not s3_handler.bucket_exits_check(bucket_name=bucket_name):
+            s3_handler.create_bucket(name=bucket_name)
+
+        s3_handler.upload_file(
+            file_name=unmaintained_ids_file, bucket_name=bucket_name
+        )
+        s3_handler.delete_oldest_object_with_prefix(
+            prefix=unmaintained_ids_file, bucket_name=bucket_name
+        )
+        s3_handler.upload_file(
+            file_name=maintained_ids_file, bucket_name=bucket_name
+        )
+        s3_handler.delete_oldest_object_with_prefix(
+            prefix=maintained_ids_file, bucket_name=bucket_name
+        )
+        s3_handler.upload_file(
+            file_name=not_suitable_ids_file, bucket_name=bucket_name
+        )
+        s3_handler.delete_oldest_object_with_prefix(
+            prefix=not_suitable_ids_file, bucket_name=bucket_name
+        )
+        logger.info(msg=f'IDs files uplaoded to the S3 bucket {bucket_name}')
+
     def search_repos(
             self, from_year: str, to_year: str,
             unmaintained_ids_file: str, maintained_ids_file: str,
             not_suitable_ids_file: str,
-            end_condition: EndCondition, value: int
+            end_condition: EndCondition, value: int,
+            region_name: str, bucket_name: str
     ) -> None:
         repo_data = RepositoryData(git=self._git)
         unmaintained_ids = self.load_visited_ids(
@@ -151,14 +186,16 @@ class Dataset:
                             unmaintained_ids.add(generated_id)
                             unmaintained_count += 1
                             logger.info(
-                                msg=f'Added unmaintained repo ID: {generated_id}, ' +
+                                msg='Added unmaintained repo ID: ' +
+                                    f'{generated_id}, ' +
                                     f'rank: {unmaintained_count}'
                             )
                         else:
                             maintained_ids.add(generated_id)
                             maintained_count += 1
                             logger.info(
-                                msg=f'Added maintained repo ID: {generated_id}, ' +
+                                msg='Added maintained repo ID: ' +
+                                    f'{generated_id}, ' +
                                     f'rank: {maintained_count}'
                             )
                     else:
@@ -168,7 +205,8 @@ class Dataset:
                         )
                 except RateLimitExceededException:
                     logger.info(
-                        msg='Github API rate limit reached, waiting for an hour'
+                        msg='Github API rate limit reached, ' +
+                            'waiting for an hour'
                     )
                     sleep(3600)
                     continue
@@ -179,11 +217,6 @@ class Dataset:
                     )
                     continue
 
-        except:
-            logger.error(
-                msg='Unexpected exception occoured', exc_info=True
-            )
-            raise
         finally:
             self.save_all(
                 unmaintained_ids_file=unmaintained_ids_file,
@@ -192,6 +225,12 @@ class Dataset:
                 maintained_ids_set=maintained_ids,
                 not_suitable_ids_file=not_suitable_ids_file,
                 not_suitable_ids_set=not_suitable_ids
+            )
+            self.uplad_all(
+                unmaintained_ids_file=unmaintained_ids_file,
+                maintained_ids_file=maintained_ids_file,
+                not_suitable_ids_file=not_suitable_ids_file,
+                region_name=region_name, bucket_name=bucket_name
             )
             logger.info(msg='End of the search')
 

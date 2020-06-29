@@ -9,6 +9,7 @@ verify_ssl = true
 python-dateutil = "~=2.8.1"
 PyYAML = "~=5.3.1"
 PyGithub = "~=1.51"
+boto3 = "*"
 
 [requires]
 python_version = "3.8"

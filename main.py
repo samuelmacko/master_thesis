@@ -61,7 +61,9 @@ if args.search:
         maintained_ids_file=gathering_config['maintained_ids'],
         not_suitable_ids_file=gathering_config['not_suitable_ids'],
         end_condition=gathering_config['end_condition'],
-        value=gathering_config['end_value']
+        value=gathering_config['end_value'],
+        region_name=gathering_config['s3_region'],
+        bucket_name=gathering_config['s3_bucket_name']
     )
 
 if args.compute:

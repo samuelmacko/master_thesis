@@ -1,12 +1,15 @@
 
-#end_condition: 'Unmaintained'
-end_condition: 'Visited'
+end_condition: 'NotSuitable'
 end_value: 3
 from_year: '2011'
-to_year: '2018'
-maintained_ids: 'data_gathering/maintained_ids.dat'
-unmaintained_ids: 'data_gathering/unmaintained_ids.dat'
-not_suitable_ids: 'data_gathering/not_suitable_ids.dat'
+to_year: '2019'
+
+maintained_ids: 'maintained_ids.dat'
+unmaintained_ids: 'unmaintained_ids.dat'
+not_suitable_ids: 'not_suitable_ids.dat'
 maintained_csv_file: 'maintained.csv'
 unmaintained_csv_file: 'unmaintained.csv'
 features_file: 'configs/features.yml'
+
+s3_region: 'us-west-2'
+s3_bucket_name: 'smacko-thesis'
