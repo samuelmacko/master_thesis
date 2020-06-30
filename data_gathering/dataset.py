@@ -112,32 +112,63 @@ class Dataset:
 
     def upload_all(
         self, unmaintained_ids_file: str, maintained_ids_file: str,
-        not_suitable_ids_file: str, region_name: str = None
+        not_suitable_ids_file: str, file_name_prefix: str,
+        region_name: str = None
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
         if not s3_handler.bucket_exits_check():
             s3_handler.create_bucket()
 
-        s3_handler.upload_file(file_name=unmaintained_ids_file)
-        s3_handler.delete_oldest_object_with_prefix(
-            prefix=unmaintained_ids_file
+        s3_handler.upload_file(
+            file_name=unmaintained_ids_file, prefix=file_name_prefix
         )
-        s3_handler.upload_file(file_name=maintained_ids_file)
-        s3_handler.delete_oldest_object_with_prefix(prefix=maintained_ids_file)
-        s3_handler.upload_file(file_name=not_suitable_ids_file)
-        s3_handler.delete_oldest_object_with_prefix(
-            prefix=not_suitable_ids_file
+        s3_handler.delete_oldest_object(
+            file_name=unmaintained_ids_file, prefix=file_name_prefix
+        )
+        s3_handler.upload_file(
+            file_name=maintained_ids_file, prefix=file_name_prefix
+        )
+        s3_handler.delete_oldest_object(
+            file_name=maintained_ids_file, prefix=file_name_prefix
+        )
+        s3_handler.upload_file(
+            file_name=not_suitable_ids_file, prefix=file_name_prefix
+        )
+        s3_handler.delete_oldest_object(
+            file_name=not_suitable_ids_file, prefix=file_name_prefix
         )
         logger.info(msg='IDs files uploaded to the S3 bucket')
+
+    def download_all(
+        self, unmaintained_ids_file: str, maintained_ids_file: str,
+        not_suitable_ids_file: str, region_name: str,
+        file_name_prefix: str = ''
+    ) -> None:
+        s3_handler = S3Handler(region_name=region_name)
+        if s3_handler.bucket_exits_check():
+            s3_handler.download_file(
+                file_name=unmaintained_ids_file, prefix=file_name_prefix
+            )
+            s3_handler.download_file(
+                file_name=maintained_ids_file, prefix=file_name_prefix
+            )
+            s3_handler.download_file(
+                file_name=not_suitable_ids_file, prefix=file_name_prefix
+            )
 
     def search_repos(
             self, from_year: str, to_year: str,
             unmaintained_ids_file: str, maintained_ids_file: str,
             not_suitable_ids_file: str,
             end_condition: EndCondition, value: int,
-            region_name: str
+            region_name: str, file_name_prefix: str
     ) -> None:
-        repo_data = RepositoryData(git=self._git)
+        self.download_all(
+            unmaintained_ids_file=unmaintained_ids_file,
+            maintained_ids_file=maintained_ids_file,
+            not_suitable_ids_file=not_suitable_ids_file,
+            region_name=region_name, file_name_prefix=file_name_prefix
+        )
         unmaintained_ids = self.load_visited_ids(
             dat_file=unmaintained_ids_file
         )
@@ -152,6 +183,7 @@ class Dataset:
         maintained_count = len(maintained_ids)
         unmaintained_count = len(unmaintained_ids)
 
+        repo_data = RepositoryData(git=self._git)
         logger.info(msg='Start of the search')
         try:
             while len(eval(EndCondition[end_condition].value)) < value:
@@ -222,7 +254,7 @@ class Dataset:
                 unmaintained_ids_file=unmaintained_ids_file,
                 maintained_ids_file=maintained_ids_file,
                 not_suitable_ids_file=not_suitable_ids_file,
-                region_name=region_name
+                region_name=region_name, file_name_prefix=file_name_prefix
             )
             logger.info(msg='End of the search')
 

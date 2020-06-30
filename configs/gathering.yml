@@ -12,3 +12,4 @@ unmaintained_csv_file: 'unmaintained.csv'
 features_file: 'configs/features.yml'
 
 s3_region: 'us-west-2'
+file_name_prefix: 'samuelmacko-thesis/'
