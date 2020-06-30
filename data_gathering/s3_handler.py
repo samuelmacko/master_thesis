@@ -12,6 +12,7 @@ _AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
 _AWS_SECRET_ACCESS_KEY = getenv('AWS_SECRET_ACCESS_KEY')
 _BUCKET_NAME = getenv('BUCKET_NAME')
 _ENDPOINT_URL = getenv('ENDPOINT_URL')
+_TIMESTAMP_FORMAT = '%Y-%m-%d-%H:%M:%S'
 
 
 class S3Handler:
@@ -45,6 +46,7 @@ class S3Handler:
 
     def upload_file(self, file_name: str) -> None:
         object_name_ts = self.append_time_stamp(s=file_name)
+        object_name_ts = 'samuelmacko-thesis/' + object_name_ts
         self.client.upload_file(file_name, _BUCKET_NAME, object_name_ts)
 
     def delete_oldest_object_with_prefix(self, prefix: str) -> None:
@@ -57,6 +59,7 @@ class S3Handler:
         Args:
             file_name: Name of the file to be uploaded.
         """
+        prefix = 'samuelmacko-thesis/' + prefix
         file_tuples_list = [
             (obj_name, self.extract_time_stamp(s=obj_name))
             for obj_name in self.list_objects_in_bucket()
@@ -83,11 +86,11 @@ class S3Handler:
     def append_time_stamp(s: str) -> str:
         current_time = time()
         time_stamp = datetime.fromtimestamp(current_time).strftime(
-            '%Y/%m/%d_%H:%M:%S'
+            _TIMESTAMP_FORMAT
         )
-        return s + '-' + time_stamp
+        return s + '_' + time_stamp
 
     @staticmethod
     def extract_time_stamp(s: str) -> datetime:
-        time_stamp = s[s.rfind('-') + 1:]
-        return datetime.strptime(time_stamp, '%Y/%m/%d_%H:%M:%S')
+        time_stamp = s[s.rfind('_') + 1:]
+        return datetime.strptime(time_stamp, _TIMESTAMP_FORMAT)
