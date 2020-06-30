@@ -59,12 +59,10 @@ class S3Handler:
         """
         file_tuples_list = [
             (obj_name, self.extract_time_stamp(s=obj_name))
-            for obj_name in self.list_objects_in_bucket(
-                bucket_name=_BUCKET_NAME
-            )
+            for obj_name in self.list_objects_in_bucket()
             if obj_name.startswith(prefix)
         ]
-        if len(file_tuples_list) > 0:
+        if len(file_tuples_list) > 1:
             file_tuples_list.sort(key=lambda tup: tup[1])
             self.client.delete_object(
                 Bucket=_BUCKET_NAME, Key=file_tuples_list[0][0]
