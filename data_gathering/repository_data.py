@@ -396,10 +396,22 @@ class RepositoryData:
         with open('configs/languages.yml', 'r') as languages_file:
             all_languages = safe_load(languages_file)
 
-        return any(
-            all_languages[language]['type'] == 'programming'
-            for language in repo_languages
-        )
+        for repo_language in repo_languages:
+            try:
+                if all_languages[repo_language]['type'] == 'programming':
+                    return True
+            except KeyError:
+                for language in all_languages:
+                    if 'aliases' in all_languages[language]:
+                        for alias in all_languages[language]['aliases']:
+                            if (
+                                alias == repo_language.lower() and
+                                all_languages[language][
+                                    'type'
+                                ] == 'programming'
+                            ):
+                                return True
+            return False
 
     def incorrectly_migrated(self) -> bool:
         commits = list(self._repo.get_commits())

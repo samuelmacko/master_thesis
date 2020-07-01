@@ -7,7 +7,7 @@ from os import getenv
 from pathlib import Path
 from random import randrange
 from time import sleep
-from typing import Any, List, Optional, Set
+from typing import Any, List, Optional, Set, Tuple
 from yaml import safe_load
 
 from github import Github
@@ -64,9 +64,9 @@ class Dataset:
             writer.writerow(data)
 
     @staticmethod
-    def save_visited_ids(dat_file: str, visited_ids: Set[int]) -> None:
+    def save_visited_ids(dat_file: str, ids_set: Set[int]) -> None:
         with open(dat_file, 'wb') as f:
-            dump(visited_ids, f)
+            dump(ids_set, f)
 
     @staticmethod
     def load_visited_ids(dat_file: str) -> Optional[Set[int]]:
@@ -92,69 +92,41 @@ class Dataset:
         )[0].id
         return from_id, to_id
 
-    def save_all(
-            self, unmaintained_ids_file: str, unmaintained_ids_set: Set,
-            maintained_ids_file: str, maintained_ids_set: Set,
-            not_suitable_ids_file: str, not_suitable_ids_set: Set
-    ) -> None:
-        self.save_visited_ids(
-            dat_file=unmaintained_ids_file,
-            visited_ids=unmaintained_ids_set
-        )
-        self.save_visited_ids(
-            dat_file=maintained_ids_file, visited_ids=maintained_ids_set
-        )
-        self.save_visited_ids(
-            dat_file=not_suitable_ids_file,
-            visited_ids=not_suitable_ids_set
-        )
+    def save_all(self, file_set_tuples: List[Tuple[str, set]]) -> None:
+        for tup in file_set_tuples:
+            self.save_visited_ids(dat_file=tup[0], ids_set=tup[1])
         logger.info(msg='IDs saved to files')
 
     def upload_all(
-        self, unmaintained_ids_file: str, maintained_ids_file: str,
-        not_suitable_ids_file: str, file_name_prefix: str,
-        region_name: str = None
+        self, file_name_prefix: str, file_names: List[str], region_name: str
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
         if not s3_handler.bucket_exits_check():
             s3_handler.create_bucket()
+            logger.info(msg='Created S3 bucket')
 
-        s3_handler.upload_file(
-            file_name=unmaintained_ids_file, prefix=file_name_prefix
-        )
-        s3_handler.delete_oldest_object(
-            file_name=unmaintained_ids_file, prefix=file_name_prefix
-        )
-        s3_handler.upload_file(
-            file_name=maintained_ids_file, prefix=file_name_prefix
-        )
-        s3_handler.delete_oldest_object(
-            file_name=maintained_ids_file, prefix=file_name_prefix
-        )
-        s3_handler.upload_file(
-            file_name=not_suitable_ids_file, prefix=file_name_prefix
-        )
-        s3_handler.delete_oldest_object(
-            file_name=not_suitable_ids_file, prefix=file_name_prefix
-        )
+        for file_name in file_names:
+            s3_handler.upload_file(
+                file_name=file_name, prefix=file_name_prefix
+            )
+            s3_handler.delete_oldest_object(
+                file_name=file_name, prefix=file_name_prefix
+            )
         logger.info(msg='IDs files uploaded to the S3 bucket')
 
     def download_all(
-        self, unmaintained_ids_file: str, maintained_ids_file: str,
-        not_suitable_ids_file: str, region_name: str,
+        self, region_name: str, file_names: List[str],
         file_name_prefix: str = ''
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
         if s3_handler.bucket_exits_check():
-            s3_handler.download_file(
-                file_name=unmaintained_ids_file, prefix=file_name_prefix
-            )
-            s3_handler.download_file(
-                file_name=maintained_ids_file, prefix=file_name_prefix
-            )
-            s3_handler.download_file(
-                file_name=not_suitable_ids_file, prefix=file_name_prefix
-            )
+            for file_name in file_names:
+                s3_handler.download_file(
+                    file_name=file_name, prefix=file_name_prefix
+                )
+            logger.info(msg='IDs files downloaded from S3 bucket')
+        else:
+            logger.info(msg='S3 bucket does not exist')
 
     def search_repos(
             self, from_year: str, to_year: str,
@@ -164,10 +136,10 @@ class Dataset:
             region_name: str, file_name_prefix: str
     ) -> None:
         self.download_all(
-            unmaintained_ids_file=unmaintained_ids_file,
-            maintained_ids_file=maintained_ids_file,
-            not_suitable_ids_file=not_suitable_ids_file,
-            region_name=region_name, file_name_prefix=file_name_prefix
+            file_names=[
+                unmaintained_ids_file, maintained_ids_file,
+                not_suitable_ids_file
+            ], region_name=region_name, file_name_prefix=file_name_prefix
         )
         unmaintained_ids = self.load_visited_ids(
             dat_file=unmaintained_ids_file
@@ -243,17 +215,17 @@ class Dataset:
 
         finally:
             self.save_all(
-                unmaintained_ids_file=unmaintained_ids_file,
-                unmaintained_ids_set=unmaintained_ids,
-                maintained_ids_file=maintained_ids_file,
-                maintained_ids_set=maintained_ids,
-                not_suitable_ids_file=not_suitable_ids_file,
-                not_suitable_ids_set=not_suitable_ids
+                file_set_tuples=[
+                    (unmaintained_ids_file, unmaintained_ids),
+                    (maintained_ids_file, maintained_ids),
+                    (not_suitable_ids_file, not_suitable_ids)
+                ]
             )
             self.upload_all(
-                unmaintained_ids_file=unmaintained_ids_file,
-                maintained_ids_file=maintained_ids_file,
-                not_suitable_ids_file=not_suitable_ids_file,
+                file_names=[
+                    unmaintained_ids_file, maintained_ids_file,
+                    not_suitable_ids_file
+                ],
                 region_name=region_name, file_name_prefix=file_name_prefix
             )
             logger.info(msg='End of the search')
@@ -261,34 +233,49 @@ class Dataset:
     def compute_features(
             self, features_file: str, unmaintained_ids_file: str,
             maintained_ids_file: str, maintained_csv_file: str,
-            unmaintained_csv_file: str
+            unmaintained_csv_file: str,
+            region_name: str, file_name_prefix: str
     ) -> None:
-        repo_data = RepositoryData(git=self._git)
+        try:
+            self.download_all(
+                file_names=[unmaintained_ids_file, maintained_ids_file],
+                region_name=region_name, file_name_prefix=file_name_prefix
+            )
 
-        features = self.load_features(features_file=features_file)
+            repo_data = RepositoryData(git=self._git)
+            features = self.load_features(features_file=features_file)
 
-        for file in (maintained_ids_file, unmaintained_ids_file):
+            for file in (maintained_ids_file, unmaintained_ids_file):
 
-            if file == maintained_ids_file:
-                csv_file = maintained_csv_file
-            else:
-                csv_file = unmaintained_csv_file
+                if file == maintained_ids_file:
+                    csv_file = maintained_csv_file
+                else:
+                    csv_file = unmaintained_csv_file
 
-            if not Path(csv_file).is_file():
-                self.prepare_csv(features=features, file_name=csv_file)
+                if not Path(csv_file).is_file():
+                    self.prepare_csv(features=features, file_name=csv_file)
 
-            repo_ids = self.load_visited_ids(dat_file=file)
-            ids_all = len(repo_ids)
-            ids_count = 0
+                repo_ids = self.load_visited_ids(dat_file=file)
+                ids_all = len(repo_ids)
+                ids_count = 0
 
-            for repo_id in repo_ids:
-                repo_data.set_repo(repo_id=repo_id)
-                self.write_to_csv(
-                    data=repo_data.get_row(features=features),
-                    file_name=csv_file
-                )
-                logger.info(
-                    msg=f'Added row with ID: {repo_id} to: {csv_file}, ' +
-                        f'rank: {ids_count} / {ids_all}'
-                )
-                repo_ids.remove(repo_id)
+                for repo_id in repo_ids:
+                    repo_data.set_repo(repo_id=repo_id)
+                    self.write_to_csv(
+                        data=repo_data.get_row(features=features),
+                        file_name=csv_file
+                    )
+                    logger.info(
+                        msg=f'Added row with ID: {repo_id} to: {csv_file}, ' +
+                            f'rank: {ids_count} / {ids_all}'
+                    )
+                    repo_ids.remove(repo_id)
+        finally:
+            # todo figure out what to do when file is empty, how to save and
+            # upload them when error in first/second
+            self.save_all(file_set_tuples=[(file, repo_ids)])
+            self.upload_all(
+                file_names=[unmaintained_ids_file, maintained_ids_file],
+                region_name=region_name, file_name_prefix=file_name_prefix
+            )
+            logger.info(msg='End of the search')
