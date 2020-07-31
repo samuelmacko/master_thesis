@@ -24,7 +24,7 @@ class S3Handler:
             's3', config=config,
             aws_access_key_id=_AWS_ACCESS_KEY_ID,
             aws_secret_access_key=_AWS_SECRET_ACCESS_KEY,
-            # endpoint_url=_ENDPOINT_URL
+            endpoint_url=_ENDPOINT_URL
         )
         self.region = region_name
 
