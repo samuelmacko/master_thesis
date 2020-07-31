@@ -1,18 +1,44 @@
 
 from datetime import datetime, timedelta
+import logging
 from math import ceil
 from os import path
 from re import compile
+from time import sleep
 from typing import Any, List, Optional, Set, Union
 from yaml import safe_load
 
+from .config import config_values
 from dateutil.relativedelta import relativedelta
 from github import Github
-from github.GithubException import UnknownObjectException
+from github.GithubException import (
+    RateLimitExceededException, UnknownObjectException
+)
 from github.NamedUser import NamedUser
 from github.Repository import Repository
 
 from .enums import AccountType
+
+
+COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+logger_config_values = config_values['logger']
+log_file_name = logger_config_values['file']
+file_handler = logging.FileHandler(log_file_name)
+file_handler.setLevel(logging.INFO)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+log_format = logger_config_values['format']
+formatter = logging.Formatter(log_format)
+file_handler.setFormatter(fmt=formatter)
+console_handler.setFormatter(fmt=formatter)
+
+logger.addHandler(hdlr=file_handler)
+logger.addHandler(hdlr=console_handler)
 
 
 class RepositoryData:
@@ -21,16 +47,14 @@ class RepositoryData:
         self._git: Github = git
         self._repo: Optional[Repository] = None
 
-    def set_repo(self, repo_id: str = None, repo: Repository = None) -> None:
-        if repo_id:
-            self._repo = self._git.get_repo(full_name_or_id=repo_id)
+    def set_repo(
+        self, repo_name_or_id: str = None, repo: Repository = None
+    ) -> None:
+        if repo_name_or_id:
+            self._repo = self._git.get_repo(full_name_or_id=repo_name_or_id)
         if repo:
             self._repo = repo
 
-# TODO pri kazdej metode kde je weeks treba poriesit ako to bude s repami co
-# mali posledny commit napr pred 4 rokmi
-# a) od posledneho commitu?
-# b) kaslat na to a brat to od dneska -> vyhovujucich rep bude len velmi malo
     def pulls_count(self, state: str = 'open', weeks: int = 104) -> int:
         if state == 'open' or state == 'closed':
             pulls = self._repo.get_pulls(state=state)
@@ -78,11 +102,28 @@ class RepositoryData:
                 counter += 1
         return counter
 
+    def last_commit_datetime(self) -> datetime:
+        return datetime.strptime(
+            self._repo.get_commits()[0].last_modified,
+            COMMIT_LAST_MODIFIED_FORMAT
+        )
+
+    def last_commit_age(self) -> int:
+        return (
+            datetime.now().date() - self.last_commit_datetime().date()
+        ).days
+
+    def first_commit_datetime(self) -> datetime:
+        return datetime.strptime(
+            self._repo.get_commits().reversed[0].last_modified,
+            COMMIT_LAST_MODIFIED_FORMAT
+        )
+
     def threshold_datetime(self, weeks: int = 104) -> datetime:
         if weeks == 0:
             date = self._repo.created_at
         else:
-            date = datetime.now().date() - relativedelta(weeks=weeks)
+            date = self.last_commit_datetime() - relativedelta(weeks=weeks)
         return datetime.combine(date, datetime.min.time())
 
     def threshold_date(self, weeks: int = 104) -> datetime:
@@ -144,7 +185,12 @@ class RepositoryData:
                 dtime=contributor.created_at
             )
 
-        return collective_age / contributors.totalCount
+        contributors_count = contributors.totalCount
+        # not really sure why or how this happens, but sometimes, it happens
+        if contributors_count == 0:
+            return 0
+        else:
+            return collective_age / contributors_count
 
     def documentation_changes_frequency(self, weeks: int = 104) -> float:
         threshold_date = self.threshold_datetime(weeks=weeks)
@@ -251,14 +297,22 @@ class RepositoryData:
         count = 0
         for contributor in contributors:
             count += contributor.followers
-        return count / contributors.totalCount
+        contributors_count = contributors.totalCount
+        if contributors_count == 0:
+            return 0
+        else:
+            return count / contributors_count
 
     def devs_following_avg(self) -> float:
         contributors = self._repo.get_contributors()
         count = 0
         for contributor in contributors:
             count += contributor.following
-        return count / contributors.totalCount
+        contributors_count = contributors.totalCount
+        if contributors_count == 0:
+            return 0
+        else:
+            return count / contributors_count
 
     def commits_by_dev_with_most_commits(self) -> int:
         commits = self._repo.get_commits()
@@ -317,7 +371,11 @@ class RepositoryData:
             if commit.author.login not in new:
                 contributors_sticked.add(commit.author.login)
 
-        return len(contributors_sticked) / len(new)
+        new_contributors_count = len(new)
+        if new_contributors_count == 0:
+            return 0
+        else:
+            return len(contributors_sticked) / new_contributors_count
 
     def _contributor_joined_datetime(
             self, contributor: NamedUser
@@ -351,7 +409,7 @@ class RepositoryData:
             while until_date < today:
                 for commit in commits:
                     added = datetime.strptime(
-                        commit.last_modified, '%a, %d %b %Y %H:%M:%S GMT'
+                        commit.last_modified, COMMIT_LAST_MODIFIED_FORMAT
                     )
                     if since_date < added < until_date:
                         additions = commit.stats.additions
@@ -438,9 +496,14 @@ class RepositoryData:
         commits = list(self._repo.get_commits(since=threshold_date))
         return bool(len(commits))
 
+    def development_time(self) -> int:
+        return (
+            self.last_commit_datetime() - self.first_commit_datetime()
+        ).days
+
     def suitable(self) -> bool:
         try:
-            if self.age() < 730:
+            if self.development_time() < 730:
                 return False
             if not self.in_programming_language():
                 return False
@@ -462,6 +525,21 @@ class RepositoryData:
 
     def get_row(self, features: List[str]) -> List[Any]:
         row = []
-        for feature in features:
-            row.append(getattr(self, feature)())
+        features_len = len(features)
+        feature_index = 0
+        while feature_index < features_len:
+            try:
+                row.append(getattr(self, features[feature_index])())
+                logger.info(
+                    msg=f'Computed {feature_index} / {features_len} ' +
+                    f'feature: {features[feature_index]}'
+                )
+                feature_index += 1
+            except RateLimitExceededException:
+                logger.info(
+                    msg='Github API rate limit reached, ' +
+                        'waiting for an hour'
+                )
+                sleep(3600)
+                continue
         return row

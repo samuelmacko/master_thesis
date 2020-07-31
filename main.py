@@ -1,7 +1,7 @@
 
 from argparse import ArgumentParser, RawTextHelpFormatter
-from yaml import safe_load
 
+from data_gathering.config import config_values
 from data_gathering.dataset import Dataset
 
 
@@ -25,8 +25,7 @@ parser.add_argument(
          '  - end_value         - value of the end condition'
 )
 parser.add_argument(
-    '-c', '--compute-features', action='store_true', dest='compute',
-    default=False,
+    '-c', '--compute-features', dest='compute',
     help='Compute features for repositories and store results in \n' +
          'corresponding .csv files' +
          'parameters expected in configs/gathering.yml: \n' +
@@ -48,29 +47,41 @@ if args.search and args.compute:
     print('Use at most one argument')
     exit(1)
 
-with open('configs/gathering.yml', 'r') as f:
-    gathering_config = safe_load(f)
-
 dataset = Dataset()
 
+s3_config_values = config_values['s3_handling']
 if args.search:
+    search_config_values = config_values['search_repos']
     dataset.search_repos(
-        from_year=gathering_config['from_year'],
-        to_year=gathering_config['to_year'],
-        unmaintained_ids_file=gathering_config['unmaintained_ids'],
-        maintained_ids_file=gathering_config['maintained_ids'],
-        not_suitable_ids_file=gathering_config['not_suitable_ids'],
-        end_condition=gathering_config['end_condition'],
-        value=gathering_config['end_value'],
-        region_name=gathering_config['s3_region'],
-        file_name_prefix=gathering_config['file_name_prefix']
+        end_condition=search_config_values['end_condition'],
+        value=search_config_values['end_value'],
+        from_year=search_config_values['from_year'],
+        to_year=search_config_values['to_year'],
+        partial_upload_size=search_config_values['partial_upload_size'],
+        unmaintained_ids_file=search_config_values['unmaintained_ids'],
+        maintained_ids_file=search_config_values['maintained_ids'],
+        not_suitable_ids_file=search_config_values['not_suitable_ids'],
+        file_name_prefix=s3_config_values['file_name_prefix'],
+        region_name=s3_config_values['region']
     )
 
-if args.compute:
+elif args.compute:
+    compute_config_values = config_values['compute_features']
+    if args.compute == 'unmaintained':
+        csv_file = compute_config_values['unmaintained']['csv_file']
+        ids_file = compute_config_values['unmaintained']['ids_file']
+    elif args.compute == 'maintained':
+        csv_file = compute_config_values['maintained']['csv_file']
+        ids_file = compute_config_values['maintained']['ids_file']
+    else:
+        print('Wrong --compute_features value')
+        exit(1)
+
     dataset.compute_features(
-        features_file=gathering_config['features_file'],
-        maintained_ids_file=gathering_config['maintained_ids'],
-        unmaintained_ids_file=gathering_config['unmaintained_ids'],
-        maintained_csv_file=gathering_config['maintained_csv_file'],
-        unmaintained_csv_file=gathering_config['unmaintained_csv_file']
+        features_file=compute_config_values['features'],
+        partial_upload_size=compute_config_values['partial_upload_size'],
+        csv_file_name=csv_file,
+        ids_file_name=ids_file,
+        file_name_prefix=s3_config_values['file_name_prefix'],
+        region_name=s3_config_values['region']
     )

@@ -1,15 +1,29 @@
 
-end_condition: 'Maintained'
-end_value: 200
-from_year: '2011'
-to_year: '2019'
+search_repos:
+  end_condition: 'Maintained'
+  end_value: 200
+  from_year: '2011'
+  to_year: '2019'
+  partial_upload_size: 10
 
-maintained_ids: 'maintained_ids.dat'
-unmaintained_ids: 'unmaintained_ids.dat'
-not_suitable_ids: 'not_suitable_ids.dat'
-maintained_csv_file: 'maintained.csv'
-unmaintained_csv_file: 'unmaintained.csv'
-features_file: 'configs/features.yml'
+  unmaintained_ids: 'unmaintained_ids.dat'
+  maintained_ids: 'maintained_ids.dat'
+  not_suitable_ids: 'not_suitable_ids.dat'
 
-s3_region: 'us-west-2'
-file_name_prefix: 'samuelmacko-thesis/'
+compute_features:
+  features: 'configs/features.yml'
+  partial_upload_size: 10
+  unmaintained:
+    csv_file: 'unmaintained.csv'
+    ids_file: 'unmaintained_ids.dat'
+  maintained:
+    csv_file: 'maintained.csv'
+    ids_file: 'maintained_ids.dat'
+
+s3_handling:
+  file_name_prefix: 'samuelmacko-thesis/'
+  region: 'us-west-2'
+
+logger:
+  file: 'event_log.log'
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'

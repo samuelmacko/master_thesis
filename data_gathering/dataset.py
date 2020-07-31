@@ -15,6 +15,7 @@ from github.GithubException import (
     RateLimitExceededException, UnknownObjectException
 )
 
+from .config import config_values
 from .enums import EndCondition
 from .repository_data import RepositoryData
 from .s3_handler import S3Handler
@@ -25,14 +26,15 @@ _GITHUB_ACCESS_TOKEN = getenv('GITHUB_ACCESS_TOKEN')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler('data_gathering.log')
+logger_config_values = config_values['logger']
+logger_file_name = logger_config_values['file']
+file_handler = logging.FileHandler(logger_file_name)
 file_handler.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+log_format = logger_config_values['format']
+formatter = logging.Formatter(log_format)
 file_handler.setFormatter(fmt=formatter)
 console_handler.setFormatter(fmt=formatter)
 
@@ -133,7 +135,8 @@ class Dataset:
             unmaintained_ids_file: str, maintained_ids_file: str,
             not_suitable_ids_file: str,
             end_condition: EndCondition, value: int,
-            region_name: str, file_name_prefix: str
+            region_name: str, file_name_prefix: str,
+            partial_upload_size: int = 10
     ) -> None:
         self.download_all(
             file_names=[
@@ -155,6 +158,7 @@ class Dataset:
         maintained_count = len(maintained_ids)
         unmaintained_count = len(unmaintained_ids)
 
+        repo_analyzed_counter = 0
         repo_data = RepositoryData(git=self._git)
         logger.info(msg='Start of the search')
         try:
@@ -199,6 +203,26 @@ class Dataset:
                         logger.info(
                             msg=f'Added not suitable repo ID: {generated_id}'
                         )
+                    repo_analyzed_counter += 1
+                    if repo_analyzed_counter == partial_upload_size:
+                        repo_analyzed_counter = 0
+                        logger.info(msg='Partial save and upload')
+                        self.save_all(
+                            file_set_tuples=[
+                                (unmaintained_ids_file, unmaintained_ids),
+                                (maintained_ids_file, maintained_ids),
+                                (not_suitable_ids_file, not_suitable_ids)
+                            ]
+                        )
+                        self.upload_all(
+                            file_names=[
+                                unmaintained_ids_file, maintained_ids_file,
+                                not_suitable_ids_file, logger_file_name
+                            ],
+                            region_name=region_name,
+                            file_name_prefix=file_name_prefix
+                        )
+
                 except RateLimitExceededException:
                     logger.info(
                         msg='Github API rate limit reached, ' +
@@ -224,58 +248,76 @@ class Dataset:
             self.upload_all(
                 file_names=[
                     unmaintained_ids_file, maintained_ids_file,
-                    not_suitable_ids_file
+                    not_suitable_ids_file, logger_file_name
                 ],
                 region_name=region_name, file_name_prefix=file_name_prefix
             )
             logger.info(msg='End of the search')
 
     def compute_features(
-            self, features_file: str, unmaintained_ids_file: str,
-            maintained_ids_file: str, maintained_csv_file: str,
-            unmaintained_csv_file: str,
-            region_name: str, file_name_prefix: str
+            self, features_file: str, ids_file_name: str, csv_file_name: str,
+            region_name: str, file_name_prefix: str,
+            partial_upload_size: int = 10
     ) -> None:
         try:
             self.download_all(
-                file_names=[unmaintained_ids_file, maintained_ids_file],
+                file_names=[ids_file_name, csv_file_name],
                 region_name=region_name, file_name_prefix=file_name_prefix
             )
 
             repo_data = RepositoryData(git=self._git)
             features = self.load_features(features_file=features_file)
+            repo_computed_counter = 0
+            computed_ids = set()
 
-            for file in (maintained_ids_file, unmaintained_ids_file):
+            if not Path(csv_file_name).is_file():
+                self.prepare_csv(features=features, file_name=csv_file_name)
 
-                if file == maintained_ids_file:
-                    csv_file = maintained_csv_file
-                else:
-                    csv_file = unmaintained_csv_file
+            repo_ids = self.load_visited_ids(dat_file=ids_file_name)
+            ids_all = len(repo_ids)
+            ids_count = 0
 
-                if not Path(csv_file).is_file():
-                    self.prepare_csv(features=features, file_name=csv_file)
-
-                repo_ids = self.load_visited_ids(dat_file=file)
-                ids_all = len(repo_ids)
-                ids_count = 0
-
-                for repo_id in repo_ids:
-                    repo_data.set_repo(repo_id=repo_id)
+            logger.info(msg='Start of computation')
+            for repo_id in repo_ids:
+                try:
+                    logger.info(msg=f'Computing repo: {repo_id}')
+                    repo_data.set_repo(repo_name_or_id=repo_id)
                     self.write_to_csv(
                         data=repo_data.get_row(features=features),
-                        file_name=csv_file
+                        file_name=csv_file_name
                     )
+                    ids_count += 1
                     logger.info(
-                        msg=f'Added row with ID: {repo_id} to: {csv_file}, ' +
+                        msg=f'Computed repo: {repo_id} to: {csv_file_name}, ' +
                             f'rank: {ids_count} / {ids_all}'
                     )
-                    repo_ids.remove(repo_id)
+                    repo_computed_counter += 1
+                    computed_ids.add(repo_id)
+
+                    if repo_computed_counter == partial_upload_size:
+                        repo_computed_counter = 0
+                        logger.info(msg='Partial upload')
+                        self.upload_all(
+                            file_names=[csv_file_name, logger_file_name],
+                            region_name=region_name,
+                            file_name_prefix=file_name_prefix
+                        )
+                except RateLimitExceededException:
+                    logger.info(
+                        msg='Github API rate limit reached, ' +
+                            'waiting for an hour'
+                    )
+                    sleep(3600)
+                    continue
+                except UnknownObjectException:
+                    logger.info(msg='Encountered a removed repository')
+                    continue
+
         finally:
-            # todo figure out what to do when file is empty, how to save and
-            # upload them when error in first/second
-            self.save_all(file_set_tuples=[(file, repo_ids)])
+            remaining_ids = repo_ids - computed_ids
+            self.save_all(file_set_tuples=[(ids_file_name, remaining_ids)])
             self.upload_all(
-                file_names=[unmaintained_ids_file, maintained_ids_file],
+                file_names=[csv_file_name, ids_file_name, logger_file_name],
                 region_name=region_name, file_name_prefix=file_name_prefix
             )
             logger.info(msg='End of the search')
