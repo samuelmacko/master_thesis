@@ -531,7 +531,7 @@ class RepositoryData:
             try:
                 row.append(getattr(self, features[feature_index])())
                 logger.info(
-                    msg=f'Computed {feature_index} / {features_len} ' +
+                    msg=f'Computed {feature_index + 1} / {features_len} ' +
                     f'feature: {features[feature_index]}'
                 )
                 feature_index += 1
