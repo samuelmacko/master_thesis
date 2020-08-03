@@ -25,6 +25,14 @@ parameters:
     required: true
     description: An AWS S3 secret access key.
 
+  - name: BUCKET_NAME
+    required: true
+    description: An AWS S3 bucket name.
+
+  - name: ENDPOINT_URL
+    required: true
+    description: An AWS S3 endpoint URL.
+
 objects:
   - apiVersion: batch/v1
     kind: Job
@@ -51,6 +59,10 @@ objects:
                   value: "${AWS_ACCESS_KEY_ID}"
                 - name: AWS_SECRET_ACCESS_KEY
                   value: "${AWS_SECRET_ACCESS_KEY}"
+                - name: BUCKET_NAME
+                  value: "${BUCKET_NAME}"
+                - name: ENDPOINT_URL
+                  value: "${ENDPOINT_URL}"
               resources:
                 limits:
                   memory: "4Gi"
@@ -84,6 +96,10 @@ objects:
                   value: "${AWS_ACCESS_KEY_ID}"
                 - name: AWS_SECRET_ACCESS_KEY
                   value: "${AWS_SECRET_ACCESS_KEY}"
+                - name: BUCKET_NAME
+                  value: "${BUCKET_NAME}"
+                - name: ENDPOINT_URL
+                  value: "${ENDPOINT_URL}"
               resources:
                 limits:
                   memory: "4Gi"
