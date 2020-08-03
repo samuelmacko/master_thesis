@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM registry.fedoraproject.org/f32/python3
 
 MAINTAINER Samuel Macko "samuel.macko.sm@gmail.com"
 
