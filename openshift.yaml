@@ -9,7 +9,11 @@ metadata:
     app: samuelmacko-master-thesis
 
 parameters:
-  - name: GITHUB_ACCESS_TOKEN
+  - name: GITHUB_ACCESS_TOKEN_MAINTAINED
+    required: true
+    description: An access token for GitHub.
+
+  - name: GITHUB_ACCESS_TOKEN_UNMAINT
     required: true
     description: An access token for GitHub.
 
@@ -25,7 +29,7 @@ objects:
   - apiVersion: batch/v1
     kind: Job
     metadata:
-      name: samuelmacko-master-thesis-maintained
+      name: sm-master-thesis-maintained
       labels:
         app: samuelmacko-master-thesis
     spec:
@@ -41,8 +45,8 @@ objects:
             - name: main
               image: samuelmacko-master-thesis-maintained
               env:
-                - name: GITHUB_ACCESS_TOKEN
-                  value: "${GITHUB_ACCESS_TOKEN}"
+                - name: GITHUB_ACCESS_TOKEN_MAINTAINED
+                  value: "${GITHUB_ACCESS_TOKEN_MAINTAINED}"
                 - name: AWS_ACCESS_KEY_ID
                   value: "${AWS_ACCESS_KEY_ID}"
                 - name: AWS_SECRET_ACCESS_KEY
@@ -58,7 +62,7 @@ objects:
   - apiVersion: batch/v1
     kind: Job
     metadata:
-      name: samuelmacko-master-thesis-unmaintained
+      name: sm-master-thesis-unmaint
       labels:
         app: samuelmacko-master-thesis
     spec:
@@ -74,8 +78,8 @@ objects:
             - name: main
               image: samuelmacko-master-thesis-unmaintained
               env:
-                - name: GITHUB_ACCESS_TOKEN
-                  value: "${GITHUB_ACCESS_TOKEN}"
+                - name: GITHUB_ACCESS_TOKEN_UNMAINT
+                  value: "${GITHUB_ACCESS_TOKEN_UNMAINT}"
                 - name: AWS_ACCESS_KEY_ID
                   value: "${AWS_ACCESS_KEY_ID}"
                 - name: AWS_SECRET_ACCESS_KEY
