@@ -11,7 +11,7 @@ COPY . ${PROJECT_DIR}/
 USER 0
 RUN chmod 777 -R ${PROJECT_DIR} && \
     pip install pipenv && \
-    pipenv install --system --deploy && \
+    pipenv install --system --deploy
 
 USER 1042
 ENTRYPOINT [ "python", "main.py", "--compute-features", "maintained" ]
