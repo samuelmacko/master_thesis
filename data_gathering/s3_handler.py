@@ -1,11 +1,13 @@
 
 from datetime import datetime
+import logging
 from os import getenv
 from time import time
 from typing import List, Optional
 
 from boto3 import client
 from botocore.config import Config
+from .config import config_values
 
 
 _AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
@@ -14,6 +16,24 @@ _BUCKET_NAME = getenv('BUCKET_NAME')
 _ENDPOINT_URL = getenv('ENDPOINT_URL')
 
 _TIMESTAMP_FORMAT = '%Y-%m-%d-%H:%M:%S'
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+logger_config_values = config_values['logger']
+logger_file_name = logger_config_values['file']
+file_handler = logging.FileHandler(logger_file_name)
+file_handler.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+log_format = logger_config_values['format']
+formatter = logging.Formatter(log_format)
+file_handler.setFormatter(fmt=formatter)
+console_handler.setFormatter(fmt=formatter)
+
+logger.addHandler(hdlr=file_handler)
+logger.addHandler(hdlr=console_handler)
 
 
 class S3Handler:
@@ -50,6 +70,7 @@ class S3Handler:
         self.client.upload_file(
             file_name, _BUCKET_NAME, prefix + object_name_ts
         )
+        logger.debug(msg=f'File uploaded: {object_name_ts}, prefix: {prefix}')
 
     def delete_oldest_object(self, file_name: str, prefix: str = '') -> None:
         """Deletes oldest object in the bucket with given file name.
@@ -68,11 +89,20 @@ class S3Handler:
                 s=obj_name, prefix=prefix
             ).startswith(file_name)
         ]
+        logger.debug(
+            msg=f'Old files found: {[f[0] for f in file_tuples_list]}'
+        )
         if len(file_tuples_list) > 1:
             file_tuples_list.sort(key=lambda tup: tup[1])
-            self.client.delete_object(
-                Bucket=_BUCKET_NAME, Key=file_tuples_list[0][0]
+            oldest_object = file_tuples_list[0][0]
+            response = self.client.delete_object(
+                Bucket=_BUCKET_NAME, Key=oldest_object
             )
+            logger.debug(
+                msg=f'File deleted: {oldest_object}, response code: ' +
+                    f'{response["ResponseMetadata"]["HTTPStatusCode"]}'
+            )
+            logger.debug(msg=f'Full responose: {response["ResponseMetadata"]}')
 
     def download_file(
         self, file_name: str, object_name: str = None, prefix: str = ''
@@ -92,7 +122,9 @@ class S3Handler:
         if obj_to_download:
             with open(file_name, 'wb') as f:
                 self.client.download_fileobj(_BUCKET_NAME, obj_to_download, f)
+            logger.debug(msg=f'File downloaded: {obj_to_download}')
         else:
+            logger.debug(msg='No file to download found')
             # todo raise some exception if file does not exist
             pass
 

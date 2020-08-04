@@ -12,7 +12,7 @@ from yaml import safe_load
 
 from github import Github
 from github.GithubException import (
-    RateLimitExceededException, UnknownObjectException
+    GithubException, RateLimitExceededException, UnknownObjectException
 )
 
 from .config import config_values
@@ -24,14 +24,14 @@ from .s3_handler import S3Handler
 _GITHUB_ACCESS_TOKEN = getenv('GITHUB_ACCESS_TOKEN')
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 logger_config_values = config_values['logger']
 logger_file_name = logger_config_values['file']
 file_handler = logging.FileHandler(logger_file_name)
-file_handler.setLevel(logging.INFO)
+file_handler.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 
 log_format = logger_config_values['format']
 formatter = logging.Formatter(log_format)
@@ -75,10 +75,14 @@ class Dataset:
         try:
             with open(dat_file, 'rb') as f:
                 try:
+                    logger.debug(msg=f'IDs from file loaded: {dat_file}')
                     return load(f)
                 except EOFError:
+                    logger.debug(
+                        msg=f'No IDs loaded: {dat_file}, created new set')
                     return set()
         except FileNotFoundError:
+            logger.debug(msg=f'No IDs loaded: {dat_file}, created new set')
             return set()
 
     @staticmethod
@@ -236,6 +240,9 @@ class Dataset:
                         msg=f'Added not suitable repo ID: {generated_id}'
                     )
                     continue
+                except GithubException:
+                    logger.info(msg='Encoutered an incomplete repository')
+                    continue
 
         finally:
             self.save_all(
@@ -274,6 +281,8 @@ class Dataset:
                 self.prepare_csv(features=features, file_name=csv_file_name)
 
             repo_ids = self.load_visited_ids(dat_file=ids_file_name)
+            logger.debug(msg=f'IDs set size: {len(repo_ids)}')
+
             ids_all = len(repo_ids)
             ids_count = 0
 
