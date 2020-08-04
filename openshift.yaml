@@ -9,7 +9,11 @@ metadata:
     app: samuelmacko-master-thesis
 
 parameters:
-  - name: GITHUB_ACCESS_TOKEN
+  - name: GITHUB_ACCESS_TOKEN_MAINTAINED
+    required: true
+    description: An access token for GitHub.
+
+  - name: GITHUB_ACCESS_TOKEN_UNMAINT
     required: true
     description: An access token for GitHub.
 
@@ -21,11 +25,19 @@ parameters:
     required: true
     description: An AWS S3 secret access key.
 
+  - name: BUCKET_NAME
+    required: true
+    description: An AWS S3 bucket name.
+
+  - name: ENDPOINT_URL
+    required: true
+    description: An AWS S3 endpoint URL.
+
 objects:
   - apiVersion: batch/v1
     kind: Job
     metadata:
-      name: samuelmacko-master-thesis
+      name: sm-master-thesis-maintained
       labels:
         app: samuelmacko-master-thesis
     spec:
@@ -39,14 +51,18 @@ objects:
           automountServiceAccountToken: false
           containers:
             - name: main
-              image: samuelmacko-master-thesis
+              image: samuelmacko-master-thesis-maintained
               env:
-                - name: GITHUB_ACCESS_TOKEN
-                  value: "${GITHUB_ACCESS_TOKEN}"
+                - name: GITHUB_ACCESS_TOKEN_MAINTAINED
+                  value: "${GITHUB_ACCESS_TOKEN_MAINTAINED}"
                 - name: AWS_ACCESS_KEY_ID
                   value: "${AWS_ACCESS_KEY_ID}"
                 - name: AWS_SECRET_ACCESS_KEY
                   value: "${AWS_SECRET_ACCESS_KEY}"
+                - name: BUCKET_NAME
+                  value: "${BUCKET_NAME}"
+                - name: ENDPOINT_URL
+                  value: "${ENDPOINT_URL}"
               resources:
                 limits:
                   memory: "4Gi"
@@ -54,12 +70,62 @@ objects:
                 requests:
                   memory: "4Gi"
                   cpu: 1
+
+  - apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: sm-master-thesis-unmaint
+      labels:
+        app: samuelmacko-master-thesis
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: samuelmacko-master-thesis
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          containers:
+            - name: main
+              image: samuelmacko-master-thesis-unmaintained
+              env:
+                - name: GITHUB_ACCESS_TOKEN_UNMAINT
+                  value: "${GITHUB_ACCESS_TOKEN_UNMAINT}"
+                - name: AWS_ACCESS_KEY_ID
+                  value: "${AWS_ACCESS_KEY_ID}"
+                - name: AWS_SECRET_ACCESS_KEY
+                  value: "${AWS_SECRET_ACCESS_KEY}"
+                - name: BUCKET_NAME
+                  value: "${BUCKET_NAME}"
+                - name: ENDPOINT_URL
+                  value: "${ENDPOINT_URL}"
+              resources:
+                limits:
+                  memory: "4Gi"
+                  cpu: 1
+                requests:
+                  memory: "4Gi"
+                  cpu: 1
+
+
   - kind: ImageStream
     apiVersion: image.openshift.io/v1
     metadata:
       labels:
         app: samuelmacko-master-thesis
-      name: samuelmacko-master-thesis
+      name: samuelmacko-master-thesis-maintained
+    spec:
+      name: latest
+      lookupPolicy:
+        local: true
+
+  - kind: ImageStream
+    apiVersion: image.openshift.io/v1
+    metadata:
+      labels:
+        app: samuelmacko-master-thesis
+      name: samuelmacko-master-thesis-unmaintained
     spec:
       name: latest
       lookupPolicy:
@@ -68,14 +134,14 @@ objects:
   - kind: BuildConfig
     apiVersion: build.openshift.io/v1
     metadata:
-      name: samuelmacko-master-thesis
+      name: samuelmacko-master-thesis-maintained
       labels:
         app: samuelmacko-master-thesis
     spec:
       output:
         to:
           kind: ImageStreamTag
-          name: samuelmacko-master-thesis:latest
+          name: samuelmacko-master-thesis-maintained:latest
       source:
         type: Git
         git:
@@ -90,4 +156,31 @@ objects:
           cpu: 1
       strategy:
         dockerStrategy:
-          dockerfilePath: Dockerfile.search_repos
+          dockerfilePath: Dockerfile.compute_features-maintained
+
+  - kind: BuildConfig
+    apiVersion: build.openshift.io/v1
+    metadata:
+      name: samuelmacko-master-thesis-unmaintained
+      labels:
+        app: samuelmacko-master-thesis
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: samuelmacko-master-thesis-unmaintained:latest
+      source:
+        type: Git
+        git:
+          uri: https://github.com/samuelmacko/master_thesis
+          ref: master
+      resources:
+        limits:
+          memory: 1Gi
+          cpu: 1
+        requests:
+          memory: 1Gi
+          cpu: 1
+      strategy:
+        dockerStrategy:
+          dockerfilePath: Dockerfile.compute_features-unmaintained
