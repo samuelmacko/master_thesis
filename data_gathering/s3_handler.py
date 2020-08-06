@@ -84,7 +84,7 @@ class S3Handler:
         """
         file_tuples_list = [
             (obj_name, self.extract_time_stamp(s=obj_name))
-            for obj_name in self.list_objects_in_bucket()
+            for obj_name in self.list_objects_in_bucket(prefix=prefix)
             if self.remove_prefix(
                 s=obj_name, prefix=prefix
             ).startswith(file_name)
@@ -111,7 +111,7 @@ class S3Handler:
         if object_name:
             obj_to_download = object_name
         else:
-            bucket_objs = self.list_objects_in_bucket()
+            bucket_objs = self.list_objects_in_bucket(prefix=prefix)
             for bucket_obj in bucket_objs:
                 obj_name_without_prefix = self.remove_prefix(
                     s=bucket_obj, prefix=prefix
@@ -128,11 +128,11 @@ class S3Handler:
             # todo raise some exception if file does not exist
             pass
 
-    def list_objects_in_bucket(self) -> List[Optional[str]]:
+    def list_objects_in_bucket(self, prefix: str = '') -> List[Optional[str]]:
         try:
             return [
                 obj['Key'] for obj in self.client.list_objects(
-                    Bucket=_BUCKET_NAME
+                    Bucket=_BUCKET_NAME, Prefix=prefix
                 )['Contents']
             ]
         except KeyError:
