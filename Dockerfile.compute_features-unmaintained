@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/f32/python3
+FROM quay.io/thoth-station/s2i-thoth-f32-py38
 
 MAINTAINER Samuel Macko "samuel.macko.sm@gmail.com"
 
