@@ -527,6 +527,7 @@ class RepositoryData:
         row = []
         features_len = len(features)
         feature_index = 0
+        rate_limit_exceeded = False
         while feature_index < features_len:
             try:
                 row.append(getattr(self, features[feature_index])())
@@ -534,8 +535,19 @@ class RepositoryData:
                     msg=f'Computed {feature_index + 1} / {features_len} ' +
                     f'feature: {features[feature_index]}'
                 )
+                rate_limit_exceeded = False
                 feature_index += 1
             except RateLimitExceededException:
+                if not rate_limit_exceeded:
+                    rate_limit_exceeded = True
+                else:
+                    logger.info(
+                        msg='Feature is too big to compute: ' +
+                            features[feature_index]
+                    )
+                    row.append('Could not compute')
+                    break
+
                 logger.info(
                     msg='Github API rate limit reached, ' +
                         'waiting for an hour'
