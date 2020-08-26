@@ -1,14 +1,11 @@
 
 from datetime import datetime, timedelta
-import logging
 from math import ceil
 from os import path
 from re import compile
-from time import sleep
 from typing import Any, List, Optional, Set, Union
 from yaml import safe_load
 
-from .config import config_values
 from dateutil.relativedelta import relativedelta
 from github import Github
 from github.GithubException import (
@@ -17,28 +14,19 @@ from github.GithubException import (
 from github.NamedUser import NamedUser
 from github.Repository import Repository
 
+from .config import config_values
 from .enums import AccountType
+from logger import setup_logger
+from .waiting import wait_for_api_calls
 
 
 COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 logger_config_values = config_values['logger']
-log_file_name = logger_config_values['file']
-file_handler = logging.FileHandler(log_file_name)
-file_handler.setLevel(logging.INFO)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-log_format = logger_config_values['format']
-formatter = logging.Formatter(log_format)
-file_handler.setFormatter(fmt=formatter)
-console_handler.setFormatter(fmt=formatter)
-
-logger.addHandler(hdlr=file_handler)
-logger.addHandler(hdlr=console_handler)
+logger = setup_logger(
+    name=__name__, file=logger_config_values['file'],
+    format=logger_config_values['format'], level=logger_config_values['level']
+)
 
 
 class RepositoryData:
@@ -546,12 +534,9 @@ class RepositoryData:
                             features[feature_index]
                     )
                     row.append('Could not compute')
-                    break
+                    continue
 
-                logger.info(
-                    msg='Github API rate limit reached, ' +
-                        'waiting for an hour'
-                )
-                sleep(3600)
+                logger.info(msg='Github API rate limit reached')
+                wait_for_api_calls(git=self._git)
                 continue
         return row

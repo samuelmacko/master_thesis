@@ -1,12 +1,10 @@
 
 import csv
 from datetime import date, datetime
-import logging
 from marshal import dump, load
 from os import getenv
 from pathlib import Path
 from random import randrange
-from time import sleep
 from typing import Any, List, Optional, Set, Tuple
 from yaml import safe_load
 
@@ -17,29 +15,19 @@ from github.GithubException import (
 
 from .config import config_values
 from .enums import EndCondition
+from logger import logger_file_name, setup_logger
 from .repository_data import RepositoryData
 from .s3_handler import S3Handler
+from .waiting import NoAPICalls, wait_for_api_calls
 
 
 _GITHUB_ACCESS_TOKEN = getenv('GITHUB_ACCESS_TOKEN')
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
 logger_config_values = config_values['logger']
-logger_file_name = logger_config_values['file']
-file_handler = logging.FileHandler(logger_file_name)
-file_handler.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-log_format = logger_config_values['format']
-formatter = logging.Formatter(log_format)
-file_handler.setFormatter(fmt=formatter)
-console_handler.setFormatter(fmt=formatter)
-
-logger.addHandler(hdlr=file_handler)
-logger.addHandler(hdlr=console_handler)
+logger = setup_logger(
+    name=__name__, file=logger_config_values['file'],
+    format=logger_config_values['format'], level=logger_config_values['level']
+)
 
 
 class Dataset:
@@ -164,6 +152,7 @@ class Dataset:
 
         repo_analyzed_counter = 0
         repo_data = RepositoryData(git=self._git)
+        logger_file = logger_file_name(logger=logger)
         logger.info(msg='Start of the search')
         try:
             while len(eval(EndCondition[end_condition].value)) < value:
@@ -221,18 +210,15 @@ class Dataset:
                         self.upload_all(
                             file_names=[
                                 unmaintained_ids_file, maintained_ids_file,
-                                not_suitable_ids_file, logger_file_name
+                                not_suitable_ids_file, logger_file
                             ],
                             region_name=region_name,
                             file_name_prefix=file_name_prefix
                         )
 
                 except RateLimitExceededException:
-                    logger.info(
-                        msg='Github API rate limit reached, ' +
-                            'waiting for an hour'
-                    )
-                    sleep(3600)
+                    logger.info(msg='Github API rate limit reached')
+                    wait_for_api_calls(git=self._git)
                     continue
                 except UnknownObjectException:
                     not_suitable_ids.add(generated_id)
@@ -243,6 +229,9 @@ class Dataset:
                 except GithubException:
                     logger.info(msg='Encoutered an incomplete repository')
                     continue
+                except NoAPICalls:
+                    logger.info(msg='API calls were not granted')
+                    return
 
         finally:
             self.save_all(
@@ -255,7 +244,7 @@ class Dataset:
             self.upload_all(
                 file_names=[
                     unmaintained_ids_file, maintained_ids_file,
-                    not_suitable_ids_file, logger_file_name
+                    not_suitable_ids_file, logger_file
                 ],
                 region_name=region_name, file_name_prefix=file_name_prefix
             )
@@ -286,6 +275,7 @@ class Dataset:
             ids_all = len(repo_ids)
             ids_count = 0
 
+            logger_file = logger_file_name(logger=logger)
             logger.info(msg='Start of computation')
             for repo_id in repo_ids:
                 try:
@@ -307,26 +297,26 @@ class Dataset:
                         repo_computed_counter = 0
                         logger.info(msg='Partial upload')
                         self.upload_all(
-                            file_names=[csv_file_name, logger_file_name],
+                            file_names=[csv_file_name, logger_file],
                             region_name=region_name,
                             file_name_prefix=file_name_prefix
                         )
                 except RateLimitExceededException:
-                    logger.info(
-                        msg='Github API rate limit reached, ' +
-                            'waiting for an hour'
-                    )
-                    sleep(3600)
+                    logger.info(msg='Github API rate limit reached')
+                    wait_for_api_calls(git=self._git)
                     continue
                 except UnknownObjectException:
                     logger.info(msg='Encountered a removed repository')
                     continue
+                except NoAPICalls:
+                    logger.info(msg='API calls were not granted')
+                    return
 
         finally:
             remaining_ids = repo_ids - computed_ids
             self.save_all(file_set_tuples=[(ids_file_name, remaining_ids)])
             self.upload_all(
-                file_names=[csv_file_name, ids_file_name, logger_file_name],
+                file_names=[csv_file_name, ids_file_name, logger_file],
                 region_name=region_name, file_name_prefix=file_name_prefix
             )
             logger.info(msg='End of the search')
