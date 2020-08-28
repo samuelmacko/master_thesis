@@ -534,7 +534,7 @@ class RepositoryData:
                             features[feature_index]
                     )
                     row.append('Could not compute')
-                    continue
+                    feature_index += 1
 
                 logger.info(msg='Github API rate limit reached')
                 wait_for_api_calls(git=self._git)
