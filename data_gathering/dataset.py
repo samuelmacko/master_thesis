@@ -1,5 +1,5 @@
 
-import csv
+from csv import writer
 from datetime import date, datetime
 from marshal import dump, load
 from os import getenv
@@ -37,31 +37,31 @@ class Dataset:
 
     @staticmethod
     def load_features(features_file: str) -> List[str]:
-        with open(features_file, 'r') as f:
+        with open(file=features_file, mode='r') as f:
             return safe_load(f)
 
     @staticmethod
     def prepare_csv(features: List[str], file_name: str) -> None:
-        with open(file_name, 'w') as f:
-            writer = csv.writer(f, delimiter=',')
-            writer.writerow(features)
+        with open(file=file_name, mode='w') as f:
+            csv_writer = writer(f, delimiter=',')
+            csv_writer.writerow(features)
 
     @staticmethod
     def write_to_csv(data: List[Any], file_name: str) -> None:
-        with open(file_name, 'a') as f:
-            writer = csv.writer(f, delimiter=',')
+        with open(file=file_name, mode='a') as f:
+            csv_writer = writer(f, delimiter=',')
             data = [str(col) for col in data]
-            writer.writerow(data)
+            csv_writer.writerow(data)
 
     @staticmethod
     def save_visited_ids(dat_file: str, ids_set: Set[int]) -> None:
-        with open(dat_file, 'wb') as f:
+        with open(file=dat_file, mode='wb') as f:
             dump(ids_set, f)
 
     @staticmethod
     def load_visited_ids(dat_file: str) -> Optional[Set[int]]:
         try:
-            with open(dat_file, 'rb') as f:
+            with open(file=dat_file, mode='rb') as f:
                 try:
                     logger.debug(msg=f'IDs from file loaded: {dat_file}')
                     return load(f)
