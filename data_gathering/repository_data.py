@@ -527,6 +527,7 @@ class RepositoryData:
             except RateLimitExceededException:
                 if not rate_limit_exceeded:
                     rate_limit_exceeded = True
+                    logger.debug(msg='Rate limit exceeded for the first time')
                 else:
                     logger.info(
                         msg='Feature is too big to compute: ' +
