@@ -2,7 +2,6 @@
 from csv import writer
 from datetime import date, datetime
 from marshal import dump, load
-from os import getenv
 from pathlib import Path
 from random import randrange
 from typing import Any, List, Optional, Set, Tuple
@@ -13,7 +12,7 @@ from github.GithubException import (
     GithubException, RateLimitExceededException, UnknownObjectException
 )
 
-from .config import config_values
+from data_gathering import GIT_INSTANCE, logger_config_values
 from .enums import EndCondition
 from logger import logger_file_name, setup_logger
 from .repository_data import RepositoryData
@@ -21,9 +20,6 @@ from .s3_handler import S3Handler
 from .waiting import NoAPICalls, wait_for_api_calls
 
 
-_GITHUB_ACCESS_TOKEN = getenv('GITHUB_ACCESS_TOKEN')
-
-logger_config_values = config_values['logger']
 logger = setup_logger(
     name=__name__, file=logger_config_values['file'],
     format=logger_config_values['format'], level=logger_config_values['level']
@@ -33,7 +29,7 @@ logger = setup_logger(
 class Dataset:
 
     def __init__(self) -> None:
-        self._git: Github = Github(login_or_token=_GITHUB_ACCESS_TOKEN)
+        self._git: Github = GIT_INSTANCE
 
     @staticmethod
     def load_features(features_file: str) -> List[str]:

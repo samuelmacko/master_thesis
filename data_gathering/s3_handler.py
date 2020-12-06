@@ -1,13 +1,14 @@
 
 from datetime import datetime
-import logging
 from os import getenv
 from time import time
 from typing import List, Optional
 
 from boto3 import client
 from botocore.config import Config
-from .config import config_values
+
+from data_gathering import logger_config_values
+from logger import setup_logger
 
 
 _AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
@@ -17,23 +18,10 @@ _ENDPOINT_URL = getenv('ENDPOINT_URL')
 
 _TIMESTAMP_FORMAT = '%Y-%m-%d-%H:%M:%S'
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-logger_config_values = config_values['logger']
-logger_file_name = logger_config_values['file']
-file_handler = logging.FileHandler(logger_file_name)
-file_handler.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-log_format = logger_config_values['format']
-formatter = logging.Formatter(log_format)
-file_handler.setFormatter(fmt=formatter)
-console_handler.setFormatter(fmt=formatter)
-
-logger.addHandler(hdlr=file_handler)
-logger.addHandler(hdlr=console_handler)
+logger = setup_logger(
+    name=__name__, file=logger_config_values['file'],
+    format=logger_config_values['format'], level=logger_config_values['level']
+)
 
 
 class S3Handler:

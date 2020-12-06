@@ -14,7 +14,7 @@ from github.GithubException import (
 from github.NamedUser import NamedUser
 from github.Repository import Repository
 
-from .config import config_values
+from data_gathering import logger_config_values
 from .enums import AccountType
 from logger import setup_logger
 from .waiting import wait_for_api_calls
@@ -22,7 +22,6 @@ from .waiting import wait_for_api_calls
 
 COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
 
-logger_config_values = config_values['logger']
 logger = setup_logger(
     name=__name__, file=logger_config_values['file'],
     format=logger_config_values['format'], level=logger_config_values['level']
