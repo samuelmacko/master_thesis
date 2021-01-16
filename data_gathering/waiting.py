@@ -18,20 +18,22 @@ class NoAPICalls(Exception):
     pass
 
 
-def wait_for_api_calls(git: Github) -> None:
-    waiting_time = time_to_wait(timestamp=git.rate_limiting_resettime) + 30
-    logger.info(msg=f'Waiting for {waiting_time} seconds')
-    sleep(waiting_time)
+def wait_for_api_calls(git: Github, number_of_attempts: int = 3) -> None:
+    for i in range(number_of_attempts):
+        waiting_time = time_to_wait(timestamp=git.rate_limiting_resettime) + 30
+        logger.info(msg=f'Waiting for {waiting_time} seconds')
+        sleep(waiting_time)
 
-    for i in range(4):
         api_calls = git.get_rate_limit().core.remaining
         if api_calls > 0:
             logger.debug(msg=f'Available {api_calls} API calls')
             return
-        elif i < 4:
-            sleep(60)
+        else:
+            logger.debug(
+                msg=f'No API calls received in attempt {i} /' +
+                '{number_of_attempts}'
+            )
 
-    logger.info(msg='No API calls received')
     raise NoAPICalls('No API calls received')
 
 

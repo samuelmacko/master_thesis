@@ -537,6 +537,6 @@ class RepositoryData:
                     feature_index += 1
 
                 logger.info(msg='Github API rate limit reached')
-                wait_for_api_calls(git=self._git)
+                wait_for_api_calls(git=self._git, number_of_attempts=10)
                 continue
         return row

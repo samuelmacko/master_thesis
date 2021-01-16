@@ -48,5 +48,5 @@ def recompute_and_substitude_rows(file_name: str, features: List[str]) -> None:
                 rate_limit_exceeded = True
             else:
                 raise CouldNotRecomputeRepo
-            wait_for_api_calls(git=GIT_INSTANCE)
+            wait_for_api_calls(git=GIT_INSTANCE, number_of_attempts=10)
             continue
