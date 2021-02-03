@@ -209,7 +209,7 @@ class RepositoryData:
 
     @staticmethod
     def _filter_dirs(dirs: List[str]) -> List[str]:
-        with open('configs/vendor.yml', 'r') as vendor_file:
+        with open('configs/data_gathering/vendor.yml', 'r') as vendor_file:
             vendor_regexes = safe_load(vendor_file)
         regexes = [compile(regex) for regex in vendor_regexes]
         for dir in dirs:
@@ -438,7 +438,9 @@ class RepositoryData:
 
     def in_programming_language(self) -> bool:
         repo_languages = self._repo.get_languages()
-        with open('configs/languages.yml', 'r') as languages_file:
+        with open(
+            'configs/data_gathering/languages.yml', 'r'
+        ) as languages_file:
             all_languages = safe_load(languages_file)
 
         for repo_language in repo_languages:

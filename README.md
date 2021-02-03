@@ -20,7 +20,7 @@ Computation of features.
 
 ### Configuration
 
-User is expected to configure data gathering part through [configuration file](configs/gathering.yml). Description of settings:
+User is expected to configure data gathering part through [configuration file](configs/data_gathering/gathering.yml). Description of settings:
 
 | Setting | Description |
 | ------- | ----------- |

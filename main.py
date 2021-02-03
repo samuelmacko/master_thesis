@@ -10,7 +10,7 @@ parser.add_argument(
     '-s', '--search-repos', action='store_true', dest='search', default=False,
     help='Search through Github repositories, evaluate them and save ' +
          'their IDs into corresponding .dat files \n' +
-         'parameters expected in configs/gathering.yml: \n' +
+         'parameters expected in configs/data_gathering/gathering.yml: \n' +
          '  - from_year         - repositories created before this year' +
          'will not be considered \n' +
          '  - to_year           - repositories created after this year' +
@@ -28,7 +28,7 @@ parser.add_argument(
     '-c', '--compute-features', dest='compute',
     help='Compute features for repositories and store results in \n' +
          'corresponding .csv files' +
-         'parameters expected in configs/gathering.yml: \n' +
+         'parameters expected in configs/data_gathering/gathering.yml: \n' +
          '  - features_file         - path to file containing a list of' +
          'features \n' +
          '  - unmaintained_ids      - path to .dat file containing IDs of' +
