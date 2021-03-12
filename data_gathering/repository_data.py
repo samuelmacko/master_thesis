@@ -138,10 +138,11 @@ class RepositoryData:
     def stargazers_count(self) -> int:
         return self._repo.stargazers_count
 
-    def age(self) -> int:
-        present_date = datetime.now().date()
-        created_date = self._repo.created_at.date()
-        return (present_date - created_date).days
+# * deprecated
+    # def age(self) -> int:
+    #     present_date = datetime.now().date()
+    #     created_date = self._repo.created_at.date()
+    #     return (present_date - created_date).days
 
     def max_days_without_commit(self, weeks: int = 104) -> int:
         threshold_date = self.threshold_datetime(weeks=weeks)
@@ -322,6 +323,7 @@ class RepositoryData:
         commits_after = self._repo.get_commits(since=threshold_date)
         contributors_old = set()
         contributors_new = set()
+# ! todo zluuucit!!
         for commit in commits_before:
             name = commit.commit.author.name
             if name not in contributors_old:
@@ -334,7 +336,7 @@ class RepositoryData:
 
         return contributors_new, contributors_old
 
-    def magneticness(self, threshold: int = 104) -> float:
+    def magnetism(self, threshold: int = 104) -> float:
         new, old = self._contributors_divided(threshold=threshold)
         if len(old) == 0:
             return 0
@@ -519,7 +521,17 @@ class RepositoryData:
         rate_limit_exceeded = False
         while feature_index < features_len:
             try:
-                row.append(getattr(self, features[feature_index])())
+                if features[feature_index] == 'issues_count':
+                    row.append(self.issues_count(state='open'))
+                    row.append(self.issues_count(state='closed'))
+
+                elif features[feature_index] == 'pulls_count':
+                    row.append(self.pulls_count(state='open'))
+                    row.append(self.pulls_count(state='closed'))
+
+                else:
+                    row.append(getattr(self, features[feature_index])())
+
                 logger.info(
                     msg=f'Computed {feature_index + 1} / {features_len} ' +
                     f'feature: {features[feature_index]}'

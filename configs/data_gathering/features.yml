@@ -10,12 +10,13 @@
 - watchers_count
 - forks_count
 - stargazers_count
-- age
+# - age
+- development_time
 - max_days_without_commit
 - owner_account_age
 - avg_dev_account_age
-- documentation_changes_frequency
-- documentation_changes_additions
+# - documentation_changes_frequency
+# - documentation_changes_additions
 - has_test
 - has_doc
 - has_example
@@ -26,7 +27,7 @@
 - devs_followers_avg
 - devs_following_avg
 - commits_by_dev_with_most_commits
-- magneticness
+- magnetism
 - stickiness
 - wealth
 - last_commit_age
