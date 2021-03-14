@@ -357,7 +357,7 @@ class RepositoryData:
         contributors_sticked = set()
 
         for commit in commits_after:
-            if commit.author.login not in new:
+            if commit.author.login and commit.author.login not in new:
                 contributors_sticked.add(commit.author.login)
 
         new_contributors_count = len(new)
