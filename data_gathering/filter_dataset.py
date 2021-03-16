@@ -38,7 +38,8 @@ def recompute_and_substitude_rows(file_name: str, features: List[str]) -> None:
 
     for repo in incomplete_rows:
         try:
-            complete_repo = rd.get_row(features=features)
+            # todo needs logger
+            # complete_repo = rd.get_row(features=features)
             rate_limit_exceeded = False
             substitude_row(
                 dataset=dataset, repo_name=repo, new_row=complete_repo
@@ -48,5 +49,8 @@ def recompute_and_substitude_rows(file_name: str, features: List[str]) -> None:
                 rate_limit_exceeded = True
             else:
                 raise CouldNotRecomputeRepo
-            wait_for_api_calls(git=GIT_INSTANCE, number_of_attempts=10)
+            # todo needs logger
+            # wait_for_api_calls(
+            #     git=GIT_INSTANCE, number_of_attempts=10, logger=logger
+            # )
             continue

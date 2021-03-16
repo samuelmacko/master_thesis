@@ -1,5 +1,6 @@
 
 from datetime import datetime, timedelta
+from logging import Logger
 from math import ceil
 from os import path
 from re import compile
@@ -14,18 +15,11 @@ from github.GithubException import (
 from github.NamedUser import NamedUser
 from github.Repository import Repository
 
-from data_gathering import logger_config_values
 from .enums import AccountType
-from logger import setup_logger
 from .waiting import wait_for_api_calls
 
 
 COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
-
-logger = setup_logger(
-    name=__name__, file=logger_config_values['file'],
-    format=logger_config_values['format'], level=logger_config_values['level']
-)
 
 
 class RepositoryData:
@@ -514,7 +508,7 @@ class RepositoryData:
     def url(self) -> str:
         return self._repo.html_url
 
-    def get_row(self, features: List[str]) -> List[Any]:
+    def get_row(self, features: List[str], logger: Logger) -> List[Any]:
         row = []
         features_len = len(features)
         feature_index = 0
@@ -551,6 +545,8 @@ class RepositoryData:
                     feature_index += 1
 
                 logger.info(msg='Github API rate limit reached')
-                wait_for_api_calls(git=self._git, number_of_attempts=10)
+                wait_for_api_calls(
+                    git=self._git, number_of_attempts=10, logger=logger
+                )
                 continue
         return row

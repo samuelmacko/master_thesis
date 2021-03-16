@@ -62,7 +62,8 @@ if args.search:
         maintained_ids_file=search_config_values['maintained_ids'],
         not_suitable_ids_file=search_config_values['not_suitable_ids'],
         file_name_prefix=s3_config_values['file_name_prefix'],
-        region_name=s3_config_values['region']
+        region_name=s3_config_values['region'],
+        logger_name=search_config_values['logger_file']
     )
 
 elif args.compute:
@@ -70,9 +71,11 @@ elif args.compute:
     if args.compute == 'unmaintained':
         csv_file = compute_config_values['unmaintained']['csv_file']
         ids_file = compute_config_values['unmaintained']['ids_file']
+        logger_file = compute_config_values['unmaintained']['logger_file'] 
     elif args.compute == 'maintained':
         csv_file = compute_config_values['maintained']['csv_file']
         ids_file = compute_config_values['maintained']['ids_file']
+        logger_file = compute_config_values['maintained']['logger_file'] 
     else:
         print('Wrong --compute_features value')
         exit(1)
@@ -83,5 +86,6 @@ elif args.compute:
         csv_file_name=csv_file,
         ids_file_name=ids_file,
         file_name_prefix=s3_config_values['file_name_prefix'],
-        region_name=s3_config_values['region']
+        region_name=s3_config_values['region'],
+        logger_name=logger_file
     )

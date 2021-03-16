@@ -1,24 +1,18 @@
 
 from datetime import datetime
+from logging import Logger
 from time import sleep
 
 from github import Github
-
-from data_gathering import logger_config_values
-from logger import setup_logger
-
-
-logger = setup_logger(
-    name=__name__, file=logger_config_values['file'],
-    format=logger_config_values['format'], level=logger_config_values['level']
-)
 
 
 class NoAPICalls(Exception):
     pass
 
 
-def wait_for_api_calls(git: Github, number_of_attempts: int = 3) -> None:
+def wait_for_api_calls(
+    git: Github, logger: Logger, number_of_attempts: int = 3
+) -> None:
     for i in range(number_of_attempts):
         waiting_time = time_to_wait(timestamp=git.rate_limiting_resettime) + 30
         logger.info(msg=f'Waiting for {waiting_time} seconds')

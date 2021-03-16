@@ -1,6 +1,7 @@
 
 from csv import writer
 from datetime import date, datetime
+from logging import Logger
 from marshal import dump, load
 from pathlib import Path
 from random import randrange
@@ -18,12 +19,6 @@ from logger import logger_file_name, setup_logger
 from .repository_data import RepositoryData
 from .s3_handler import S3Handler
 from .waiting import NoAPICalls, wait_for_api_calls
-
-
-logger = setup_logger(
-    name=__name__, file=logger_config_values['file'],
-    format=logger_config_values['format'], level=logger_config_values['level']
-)
 
 
 class Dataset:
@@ -55,7 +50,7 @@ class Dataset:
             dump(ids_set, f)
 
     @staticmethod
-    def load_visited_ids(dat_file: str) -> Optional[Set[int]]:
+    def load_visited_ids(dat_file: str, logger: Logger) -> Optional[Set[int]]:
         try:
             with open(file=dat_file, mode='rb') as f:
                 try:
@@ -82,13 +77,16 @@ class Dataset:
         )[0].id
         return from_id, to_id
 
-    def save_all(self, file_set_tuples: List[Tuple[str, set]]) -> None:
+    def save_all(
+        self, file_set_tuples: List[Tuple[str, set]], logger: Logger
+    ) -> None:
         for tup in file_set_tuples:
             self.save_visited_ids(dat_file=tup[0], ids_set=tup[1])
         logger.info(msg='IDs saved to files')
 
     def upload_all(
-        self, file_name_prefix: str, file_names: List[str], region_name: str
+        self, file_name_prefix: str, file_names: List[str], region_name: str,
+        logger: Logger
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
         if not s3_handler.bucket_exits_check():
@@ -97,47 +95,55 @@ class Dataset:
 
         for file_name in file_names:
             s3_handler.upload_file(
-                file_name=file_name, prefix=file_name_prefix
+                file_name=file_name, prefix=file_name_prefix, logger=logger
             )
             s3_handler.delete_oldest_object(
-                file_name=file_name, prefix=file_name_prefix
+                file_name=file_name, prefix=file_name_prefix, logger=logger
             )
         logger.info(msg='IDs files uploaded to the S3 bucket')
 
     def download_all(
-        self, region_name: str, file_names: List[str],
+        self, region_name: str, file_names: List[str], logger: Logger,
         file_name_prefix: str = ''
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
         if s3_handler.bucket_exits_check():
             for file_name in file_names:
                 s3_handler.download_file(
-                    file_name=file_name, prefix=file_name_prefix
+                    file_name=file_name, prefix=file_name_prefix, logger=logger
                 )
             logger.info(msg='IDs files downloaded from S3 bucket')
         else:
             logger.info(msg='S3 bucket does not exist')
 
     def search_repos(
-            self, from_year: str, to_year: str,
+            self, logger_name: str, from_year: str, to_year: str,
             unmaintained_ids_file: str, maintained_ids_file: str,
             not_suitable_ids_file: str,
             end_condition: EndCondition, value: int,
             region_name: str, file_name_prefix: str,
             partial_upload_size: int = 10
     ) -> None:
+        logger = setup_logger(
+            name=__name__, file=logger_name,
+            format=logger_config_values['format'],
+            level=logger_config_values['level']
+        )
         self.download_all(
             file_names=[
                 unmaintained_ids_file, maintained_ids_file,
                 not_suitable_ids_file
-            ], region_name=region_name, file_name_prefix=file_name_prefix
+            ], region_name=region_name, file_name_prefix=file_name_prefix,
+            logger=logger
         )
         unmaintained_ids = self.load_visited_ids(
-            dat_file=unmaintained_ids_file
+            dat_file=unmaintained_ids_file, logger=logger
         )
-        maintained_ids = self.load_visited_ids(dat_file=maintained_ids_file)
+        maintained_ids = self.load_visited_ids(
+            dat_file=maintained_ids_file, logger=logger
+        )
         not_suitable_ids = self.load_visited_ids(
-            dat_file=not_suitable_ids_file
+            dat_file=not_suitable_ids_file, logger=logger
         )
 
         from_year_date = datetime.strptime(from_year, '%Y').date()
@@ -201,7 +207,8 @@ class Dataset:
                                 (unmaintained_ids_file, unmaintained_ids),
                                 (maintained_ids_file, maintained_ids),
                                 (not_suitable_ids_file, not_suitable_ids)
-                            ]
+                            ],
+                            logger=logger
                         )
                         self.upload_all(
                             file_names=[
@@ -209,12 +216,15 @@ class Dataset:
                                 not_suitable_ids_file, logger_file
                             ],
                             region_name=region_name,
-                            file_name_prefix=file_name_prefix
+                            file_name_prefix=file_name_prefix,
+                            logger=logger
                         )
 
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
-                    wait_for_api_calls(git=self._git, number_of_attempts=10)
+                    wait_for_api_calls(
+                        git=self._git, number_of_attempts=10, logger=logger
+                    )
                     continue
                 except UnknownObjectException:
                     not_suitable_ids.add(generated_id)
@@ -235,26 +245,34 @@ class Dataset:
                     (unmaintained_ids_file, unmaintained_ids),
                     (maintained_ids_file, maintained_ids),
                     (not_suitable_ids_file, not_suitable_ids)
-                ]
+                ],
+                logger=logger
             )
             self.upload_all(
                 file_names=[
                     unmaintained_ids_file, maintained_ids_file,
                     not_suitable_ids_file, logger_file
                 ],
-                region_name=region_name, file_name_prefix=file_name_prefix
+                region_name=region_name, file_name_prefix=file_name_prefix,
+                logger=logger
             )
             logger.info(msg='End of the search')
 
     def compute_features(
-            self, features_file: str, ids_file_name: str, csv_file_name: str,
-            region_name: str, file_name_prefix: str,
+            self, logger_name: str, features_file: str, ids_file_name: str,
+            csv_file_name: str, region_name: str, file_name_prefix: str,
             partial_upload_size: int = 10
     ) -> None:
         try:
+            logger = setup_logger(
+                name=__name__, file=logger_name,
+                format=logger_config_values['format'],
+                level=logger_config_values['level']
+            )
             self.download_all(
                 file_names=[ids_file_name, csv_file_name],
-                region_name=region_name, file_name_prefix=file_name_prefix
+                region_name=region_name, file_name_prefix=file_name_prefix,
+                logger=logger
             )
 
             repo_data = RepositoryData(git=self._git)
@@ -265,7 +283,9 @@ class Dataset:
             if not Path(csv_file_name).is_file():
                 self.prepare_csv(features=features, file_name=csv_file_name)
 
-            repo_ids = self.load_visited_ids(dat_file=ids_file_name)
+            repo_ids = self.load_visited_ids(
+                dat_file=ids_file_name, logger=logger
+            )
             logger.debug(msg=f'IDs set size: {len(repo_ids)}')
 
             ids_all = len(repo_ids)
@@ -278,7 +298,9 @@ class Dataset:
                     logger.info(msg=f'Computing repo: {repo_id}')
                     repo_data.set_repo(repo_name_or_id=repo_id)
                     self.write_to_csv(
-                        data=repo_data.get_row(features=features),
+                        data=repo_data.get_row(
+                            features=features, logger=logger
+                        ),
                         file_name=csv_file_name
                     )
                     ids_count += 1
@@ -295,11 +317,14 @@ class Dataset:
                         self.upload_all(
                             file_names=[csv_file_name, logger_file],
                             region_name=region_name,
-                            file_name_prefix=file_name_prefix
+                            file_name_prefix=file_name_prefix,
+                            logger=logger
                         )
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
-                    wait_for_api_calls(git=self._git, number_of_attempts=10)
+                    wait_for_api_calls(
+                        git=self._git, number_of_attempts=10, logger=logger
+                    )
                     continue
                 except UnknownObjectException:
                     logger.info(msg='Encountered a removed repository')
@@ -310,9 +335,13 @@ class Dataset:
 
         finally:
             remaining_ids = repo_ids - computed_ids
-            self.save_all(file_set_tuples=[(ids_file_name, remaining_ids)])
+            self.save_all(
+                file_set_tuples=[(ids_file_name, remaining_ids)],
+                logger=logger
+            )
             self.upload_all(
                 file_names=[csv_file_name, ids_file_name, logger_file],
-                region_name=region_name, file_name_prefix=file_name_prefix
+                region_name=region_name, file_name_prefix=file_name_prefix,
+                logger=logger
             )
             logger.info(msg='End of the search')

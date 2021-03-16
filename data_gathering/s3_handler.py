@@ -1,14 +1,12 @@
 
 from datetime import datetime
+from logging import Logger
 from os import getenv
 from time import time
 from typing import List, Optional
 
 from boto3 import client
 from botocore.config import Config
-
-from data_gathering import logger_config_values
-from logger import setup_logger
 
 
 _AWS_ACCESS_KEY_ID = getenv('AWS_ACCESS_KEY_ID')
@@ -17,11 +15,6 @@ _BUCKET_NAME = getenv('BUCKET_NAME')
 _ENDPOINT_URL = getenv('ENDPOINT_URL')
 
 _TIMESTAMP_FORMAT = '%Y-%m-%d-%H:%M:%S'
-
-logger = setup_logger(
-    name=__name__, file=logger_config_values['file'],
-    format=logger_config_values['format'], level=logger_config_values['level']
-)
 
 
 class S3Handler:
@@ -53,14 +46,18 @@ class S3Handler:
         except self.client.exceptions.NoSuchBucket:
             return False
 
-    def upload_file(self, file_name: str, prefix: str = '') -> None:
+    def upload_file(
+        self, file_name: str, logger: Logger, prefix: str = ''
+    ) -> None:
         object_name_ts = self.append_time_stamp(s=file_name)
         self.client.upload_file(
             file_name, _BUCKET_NAME, prefix + object_name_ts
         )
         logger.debug(msg=f'File uploaded: {object_name_ts}, prefix: {prefix}')
 
-    def delete_oldest_object(self, file_name: str, prefix: str = '') -> None:
+    def delete_oldest_object(
+        self, file_name: str, logger: Logger, prefix: str = ''
+    ) -> None:
         """Deletes oldest object in the bucket with given file name.
 
         Oldest object is determined by the timestamp in the object name.
@@ -93,7 +90,8 @@ class S3Handler:
             logger.debug(msg=f'Full responose: {response["ResponseMetadata"]}')
 
     def download_file(
-        self, file_name: str, object_name: str = None, prefix: str = ''
+        self, file_name: str, logger: Logger, object_name: str = None,
+        prefix: str = ''
     ) -> None:
         obj_to_download = None
         if object_name:

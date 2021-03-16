@@ -5,6 +5,7 @@ search_repos:
   from_year: '2011'
   to_year: '2019'
   partial_upload_size: 10
+  logger_file: 'search_repos.log'
 
   unmaintained_ids: 'unmaintained_ids.dat'
   maintained_ids: 'maintained_ids.dat'
@@ -16,15 +17,16 @@ compute_features:
   unmaintained:
     csv_file: 'unmaintained.csv'
     ids_file: 'unmaintained_ids.dat'
+    logger_file: 'compute_unmaintained.log'
   maintained:
     csv_file: 'maintained.csv'
     ids_file: 'maintained_ids.dat'
+    logger_file: 'compute_maintained.log'
 
 s3_handling:
   file_name_prefix: 'samuelmacko-thesis/'
   region: 'us-west-2'
 
 logger:
-  file: 'event_log.log'
   format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
   level: 'DEBUG'
