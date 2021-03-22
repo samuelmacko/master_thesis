@@ -222,9 +222,9 @@ class Dataset:
 
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
-                    wait_for_api_calls(
-                        git=self._git, number_of_attempts=10, logger=logger
-                    )
+                    # wait_for_api_calls(
+                    #     git=self._git, number_of_attempts=10, logger=logger
+                    # )
                     continue
                 except UnknownObjectException:
                     not_suitable_ids.add(generated_id)
