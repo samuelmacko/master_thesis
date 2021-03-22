@@ -139,10 +139,10 @@ objects:
                   value: "${ENDPOINT_URL}"
               resources:
                 limits:
-                  memory: "2Gi"
+                  memory: "3Gi"
                   cpu: 1
                 requests:
-                  memory: "2Gi"
+                  memory: "3Gi"
                   cpu: 1
 
   - kind: ImageStream
