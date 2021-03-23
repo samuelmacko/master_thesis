@@ -20,6 +20,10 @@ class ProcessedDataset:
         unmaintained = read_csv(filepath_or_buffer=unmaintained_path)
 
         maintained_transformed = self.transform_dataframe(dataset=maintained)
+        # ! najprv musim rozdelit data na train a test sady a az potom
+        # ! normalizovat, inak sa na vypocet 'mean' v normalizacii pouziju
+        # ! aj test data a to je data leakage
+        # (https://scikit-learn.org/stable/common_pitfalls.html#data-leakage-during-pre-processing)
         unmaintained_transformed = self.transform_dataframe(
             dataset=unmaintained
         )
@@ -55,6 +59,7 @@ class ProcessedDataset:
 
         transformer = ColumnTransformer([
             ('OHE', OneHotEncoder(), cols_to_encode),
+            # ! pozriet RobustScaler - https://scikit-learn.org/stable/modules/preprocessing.html#scaling-data-with-outliers
             ('StScaler', StandardScaler(), cols_to_scale)
         ])
 
