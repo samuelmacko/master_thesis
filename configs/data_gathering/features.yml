@@ -1,8 +1,10 @@
 
 - repo_name
 - url
-- pulls_count
-- issues_count
+- pulls_count_open
+- pulls_count_closed
+- issues_count_open
+- issues_count_closed
 - commits_count
 - branches_count
 - releases_count
@@ -10,13 +12,10 @@
 - watchers_count
 - forks_count
 - stargazers_count
-# - age
 - development_time
-- max_days_without_commit
+# - max_days_without_commit
 - owner_account_age
 - avg_dev_account_age
-# - documentation_changes_frequency
-# - documentation_changes_additions
 - has_test
 - has_doc
 - has_example
@@ -31,4 +30,3 @@
 - stickiness
 - wealth
 - last_commit_age
-#- health

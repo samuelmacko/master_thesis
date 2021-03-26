@@ -28,6 +28,9 @@ class RepositoryData:
         self._git: Github = git
         self._repo: Optional[Repository] = None
 
+        self._files = None
+        self._dirs = None
+
     def set_repo(
         self, repo_name_or_id: str = None, repo: Repository = None
     ) -> None:
@@ -35,6 +38,9 @@ class RepositoryData:
             self._repo = self._git.get_repo(full_name_or_id=repo_name_or_id)
         if repo:
             self._repo = repo
+
+        self._files = None
+        self._dirs = None
 
     def pulls_count(self, state: str = 'open', weeks: int = 104) -> int:
         if state == 'open' or state == 'closed':
@@ -54,6 +60,12 @@ class RepositoryData:
                 counter += 1
         return counter
 
+    def pulls_count_open(self, weeks: int = 104) -> int:
+        return self.pulls_count(state='open')
+
+    def pulls_count_closed(self, weeks: int = 104) -> int:
+        return self.pulls_count(state='closed')
+
     def issues_count(self, state: str = 'open', weeks: int = 104) -> int:
         if state == 'open' or state == 'closed':
             issues = self._repo.get_issues(state=state)
@@ -66,6 +78,12 @@ class RepositoryData:
             if issue.created_at < threshold_date:
                 counter += 1
         return counter
+
+    def issues_count_open(self, weeks: int = 104) -> int:
+        return self.issues_count(state='open')
+
+    def issues_count_closed(self, weeks: int = 104) -> int:
+        return self.issues_count(state='closed')
 
     def commits_count(self, weeks: int = 104) -> int:
         threshold_date = self.threshold_datetime(weeks=weeks)
@@ -137,19 +155,19 @@ class RepositoryData:
         created_date = self._repo.created_at.date()
         return (present_date - created_date).days
 
-    def max_days_without_commit(self, weeks: int = 104) -> int:
-        threshold_date = self.threshold_datetime(weeks=weeks)
-        commits = list(self._repo.get_commits(since=threshold_date))
-        max_days = 0
-        prev_commit = commits[0]
-        for commit in commits[1:]:
-            days = (
-                    prev_commit.commit.author.date - commit.commit.author.date
-            ).days
-            if days > max_days:
-                max_days = days
+    # def max_days_without_commit(self) -> int:
+    #     threshold_date = self.threshold_datetime(weeks=weeks)
+    #     commits = list(self._repo.get_commits(since=threshold_date))
+    #     max_days = 0
+    #     prev_commit = commits[0]
+    #     for commit in commits[1:]:
+    #         days = (
+    #                 prev_commit.commit.author.date - commit.commit.author.date
+    #         ).days
+    #         if days > max_days:
+    #             max_days = days
 
-        return max_days
+    #     return max_days
 
     def owner_account_age(self) -> int:
         return self.datetime_to_days(dtime=self._repo.owner.created_at)
@@ -227,6 +245,10 @@ class RepositoryData:
             ])
             dirs += subdirs
             i += 1
+
+        if not self._dirs:
+            self._dirs = dirs
+
         return dirs
 
     def _get_files(self) -> List[str]:
@@ -236,10 +258,18 @@ class RepositoryData:
                 file.path for file in self._repo.get_contents(path=dir)
                 if file.type == 'file'
             ])
+
+        if not self._files:
+            self._files = files
+
         return files
 
     def _has_file(self, file_names: List[str]) -> bool:
-        files = [path.basename(file) for file in self._get_dirs()]
+        if not self._files:
+            files = [path.basename(file) for file in self._get_dirs()]
+        else:
+            files = self._files
+
         for file in file_names:
             if file.lower() in files:
                 return True
@@ -499,8 +529,8 @@ class RepositoryData:
         return True
 
     def unmaintained(self) -> bool:
-        return self.unmaintained_in_readme() or self.archived() or \
-               not self.commit_in_weeks(weeks=52)
+        return not self.commit_in_weeks(weeks=52) or \
+            self.archived() or self.unmaintained_in_readme()
 
     def repo_name(self) -> str:
         return self._repo.full_name
@@ -515,16 +545,16 @@ class RepositoryData:
         rate_limit_exceeded = False
         while feature_index < features_len:
             try:
-                if features[feature_index] == 'issues_count':
-                    row.append(self.issues_count(state='open'))
-                    row.append(self.issues_count(state='closed'))
+                # if features[feature_index] == 'issues_count':
+                #     row.append(self.issues_count(state='open'))
+                #     row.append(self.issues_count(state='closed'))
 
-                elif features[feature_index] == 'pulls_count':
-                    row.append(self.pulls_count(state='open'))
-                    row.append(self.pulls_count(state='closed'))
+                # elif features[feature_index] == 'pulls_count':
+                #     row.append(self.pulls_count(state='open'))
+                #     row.append(self.pulls_count(state='closed'))
 
-                else:
-                    row.append(getattr(self, features[feature_index])())
+                # else:
+                row.append(getattr(self, features[feature_index])())
 
                 logger.info(
                     msg=f'Computed {feature_index + 1} / {features_len} ' +
