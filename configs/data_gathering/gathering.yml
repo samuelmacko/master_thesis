@@ -1,6 +1,6 @@
 
 search_repos:
-  end_condition: 'Maintained'
+  end_condition: 'Unmaintained'
   end_value: 1000
   from_year: '2011'
   to_year: '2019'

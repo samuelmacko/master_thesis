@@ -104,7 +104,7 @@ class RepositoryData:
         if weeks == 0:
             date = self._repo.created_at
         else:
-            date = self.last_commit_datetime() - relativedelta(weeks=weeks)
+            date = datetime.now().date() - relativedelta(weeks=weeks)
         return datetime.combine(date, datetime.min.time())
 
     def threshold_date(self, weeks: int = 104) -> datetime:
@@ -132,11 +132,10 @@ class RepositoryData:
     def stargazers_count(self) -> int:
         return self._repo.stargazers_count
 
-# * deprecated
-    # def age(self) -> int:
-    #     present_date = datetime.now().date()
-    #     created_date = self._repo.created_at.date()
-    #     return (present_date - created_date).days
+    def age(self) -> int:
+        present_date = datetime.now().date()
+        created_date = self._repo.created_at.date()
+        return (present_date - created_date).days
 
     def max_days_without_commit(self, weeks: int = 104) -> int:
         threshold_date = self.threshold_datetime(weeks=weeks)
@@ -488,7 +487,8 @@ class RepositoryData:
 
     def suitable(self) -> bool:
         try:
-            if self.development_time() < 730:
+            # if self.development_time() < 730:
+            if self.age() < 730:
                 return False
             if not self.in_programming_language():
                 return False
@@ -500,7 +500,7 @@ class RepositoryData:
 
     def unmaintained(self) -> bool:
         return self.unmaintained_in_readme() or self.archived() or \
-               not self.commit_in_weeks()
+               not self.commit_in_weeks(weeks=52)
 
     def repo_name(self) -> str:
         return self._repo.full_name
