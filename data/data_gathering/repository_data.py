@@ -155,20 +155,6 @@ class RepositoryData:
         created_date = self._repo.created_at.date()
         return (present_date - created_date).days
 
-    # def max_days_without_commit(self) -> int:
-    #     threshold_date = self.threshold_datetime(weeks=weeks)
-    #     commits = list(self._repo.get_commits(since=threshold_date))
-    #     max_days = 0
-    #     prev_commit = commits[0]
-    #     for commit in commits[1:]:
-    #         days = (
-    #                 prev_commit.commit.author.date - commit.commit.author.date
-    #         ).days
-    #         if days > max_days:
-    #             max_days = days
-
-    #     return max_days
-
     def owner_account_age(self) -> int:
         return self.datetime_to_days(dtime=self._repo.owner.created_at)
 
@@ -221,7 +207,7 @@ class RepositoryData:
 
     @staticmethod
     def _filter_dirs(dirs: List[str]) -> List[str]:
-        with open('configs/data_gathering/vendor.yml', 'r') as vendor_file:
+        with open('configs/vendor.yml', 'r') as vendor_file:
             vendor_regexes = safe_load(vendor_file)
         regexes = [compile(regex) for regex in vendor_regexes]
         for dir in dirs:
@@ -464,7 +450,7 @@ class RepositoryData:
     def in_programming_language(self) -> bool:
         repo_languages = self._repo.get_languages()
         with open(
-            'configs/data_gathering/languages.yml', 'r'
+            'configs/languages.yml', 'r'
         ) as languages_file:
             all_languages = safe_load(languages_file)
 

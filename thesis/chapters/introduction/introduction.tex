@@ -1,0 +1,35 @@
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+
+This thesis was developed in collaboration with \emph{Red Hat}\footnote{See \url{https://www.redhat.com/en}} as a research project.
+Partners from \emph{Red Hat} provided expert guidance throughout the whole process of the thesis development and infrastructure for the dataset gathering and model training.
+% todo
+(Mal by v uvode byt tento odstavec? Ak ano tak kde?)
+
+Open source software (OSS) is a type of computer software in which source code is released under a license in which the copyright holder grants users the rights to use, study, change, and distribute the software to anyone and for any purpose\footnote{See \url{https://books.google.cz/books?id=04jG7TTLujoC&pg=PA4&redir_esc=y\#v=onepage&q&f=false}}.
+Open source projects have an increasing relevance in modern software development.
+For example, many critical software systems are currently available under open source licenses, including operating systems, compilers, databases, and web servers.
+Similarly, it is common nowadays to depend on open source libraries and frameworks when building and evolving proprietary software \cite{p:7}.
+
+\emph{GitHub}\footnote{See \url{https://github.com/}} is the world’s largest collection of open source software, with more than 56 million users and 100 million projects.
+It offers the distributed version control and source code management functionality of \emph{Git}\footnote{See \url{https://git-scm.com/}} and some more features.
+
+\subsection*{Aim}
+
+As more and more technologies rely on open source software, it is important to put a lot of attention into choosing such dependencies.
+If an open source repository ceases to be actively developed and becomes obsolete, it can cause serious issues for all of the other projects that depend on this repository.
+It would be helpful to be able to determine if a \emph{GitHub} hosted repository has a high chance of being actively developed in the future, or if it will likely die off.
+The aim of this thesis is precisely that, to develop a \emph{machine learning}\footnote{See \url{https://en.wikipedia.org/wiki/Machine_learning}} model to estimate a probability of survival of \emph{GitHub} repositories.
+
+\subsection*{Key contributions}
+
+I developed applications \ref{sec:applications} for gathering relevant data that can be used to construct an input dataset for \emph{machine learning} models \ref{sec:training_evaluation}.
+I also proposed and tested a set of features \ref{chap-2:features} for determining project's survivability.
+
+\subsection*{Contents}
+
+Chapter \ref{chap-1:review} goes over some research papers aiming to solve a similar problem as this thesis.
+In the chapter \ref{chap-2:features}, I go over proposed features and give an explanation of what they measure and why I decided to include them.
+Chapter \ref{chap-3:implementation} describes the process of gathering and preparing data, as well as methods used for training and evaluating machine learning models used for making predictions.
+Then, the chapter \ref{chap-4:results} provides a summary and analysis of the achieved results.
+The final chapter, chapter \ref{chap-5:summary}, provides a summary of the thesis.

@@ -1,0 +1,323 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% I, the copyright holder of this work, release this work into the
+%% public domain. This applies worldwide. In some countries this may
+%% not be legally possible; if so: I grant anyone the right to use
+%% this work for any purpose, without any conditions, unless such
+%% conditions are required by law.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[
+  digital, %% The `digital` option enables the default options for the
+           %% digital version of a document. Replace with `printed`
+           %% to enable the default options for the printed version
+           %% of a document.
+%%  color,   %% Uncomment these lines (by removing the %% at the
+%%           %% beginning) to use color in the digital version of your
+%%           %% document
+  table,   %% The `table` option causes the coloring of tables.
+           %% Replace with `notable` to restore plain LaTeX tables.
+  twoside, %% The `twoside` option enables double-sided typesetting.
+           %% Use at least 120 g/m² paper to prevent show-through.
+           %% Replace with `oneside` to use one-sided typesetting;
+           %% use only if you don’t have access to a double-sided
+           %% printer, or if one-sided typesetting is a formal
+           %% requirement at your faculty.
+  lof,     %% The `lof` option prints the List of Figures. Replace
+           %% with `nolof` to hide the List of Figures.
+  lot,     %% The `lot` option prints the List of Tables. Replace
+           %% with `nolot` to hide the List of Tables.
+  %% More options are listed in the user guide at
+  %% <http://mirrors.ctan.org/macros/latex/contrib/fithesis/guide/mu/fi.pdf>.
+]{fithesis3}
+%% The following section sets up the locales used in the thesis.
+\usepackage[resetfonts]{cmap} %% We need to load the T2A font encoding
+\usepackage[T1,T2A]{fontenc}  %% to use the Cyrillic fonts with Russian texts.
+\usepackage[
+  main=english, %% By using `czech` or `slovak` as the main locale
+                %% instead of `english`, you can typeset the thesis
+                %% in either Czech or Slovak, respectively.
+  english, german, russian, czech, slovak %% The additional keys allow
+]{babel}        %% foreign texts to be typeset as follows:
+%%
+%%   \begin{otherlanguage}{german}  ... \end{otherlanguage}
+%%   \begin{otherlanguage}{russian} ... \end{otherlanguage}
+%%   \begin{otherlanguage}{czech}   ... \end{otherlanguage}
+%%   \begin{otherlanguage}{slovak}  ... \end{otherlanguage}
+%%
+%% For non-Latin scripts, it may be necessary to load additional
+%% fonts:
+\usepackage{paratype}
+\def\textrussian#1{{\usefont{T2A}{PTSerif-TLF}{m}{rm}#1}}
+%%
+%% The following section sets up the metadata of the thesis.
+\thesissetup{
+    date        = \the\year/\the\month/\the\day,
+    university  = mu,
+    faculty     = fi,
+    type        = bc,
+    author      = Jane Doe,
+    gender      = f,
+    advisor     = {Prof. RNDr. John Smith, CSc.},
+    title       = {The Proof of P = NP},
+    TeXtitle    = {The Proof of $\mathsf{P}=\mathsf{NP}$},
+    keywords    = {keyword1, keyword2, ...},
+    TeXkeywords = {keyword1, keyword2, \ldots},
+    abstract    = {%
+      This is the abstract of my thesis, which can
+
+      span multiple paragraphs.
+    },
+    thanks      = {%
+      These are the acknowledgements for my thesis, which can
+
+      span multiple paragraphs.
+    },
+    bib         = example.bib,
+    %% Uncomment the following line (by removing the %% at the
+    %% beginning) and replace `assignment.pdf` with the filename
+    %% of your scanned thesis assignment.
+%%    assignment         = assignment.pdf,
+}
+\usepackage{makeidx}      %% The `makeidx` package contains
+\makeindex                %% helper commands for index typesetting.
+%% These additional packages are used within the document:
+\usepackage{paralist} %% Compact list environments
+\usepackage{amsmath}  %% Mathematics
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{url}      %% Hyperlinks
+% \usepackage{markdown} %% Lightweight markup
+\usepackage{tabularx} %% Tables
+\usepackage{tabu}
+\usepackage{booktabs}
+\usepackage{listings} %% Source code highlighting
+\lstset{
+  basicstyle      = \ttfamily,
+  identifierstyle = \color{black},
+  keywordstyle    = \color{blue},
+  keywordstyle    = {[2]\color{cyan}},
+  keywordstyle    = {[3]\color{olive}},
+  stringstyle     = \color{teal},
+  commentstyle    = \itshape\color{magenta},
+  breaklines      = true,
+}
+\usepackage{floatrow} %% Putting captions above tables
+
+
+% \usepackage{threeparttable}
+% \usepackage{lscape}
+
+\floatsetup[table]{capposition=top}
+\begin{document}
+
+\include{chapters/introduction/introduction}
+
+\include{chapters/chapter1/existing_solutions}
+
+\include{chapters/chapter2/features}
+
+\include{chapters/chapter3/implementation}
+
+\include{chapters/chapter4/results}
+
+\include{chapters/chapter5/summary}
+
+% \begin{description}
+%   \item[Description list]
+%     A list of terms with a description of each term
+% \end{description}
+
+% The spacing of these lists is geared towards paragraphs of text.
+% For lists of words and phrases, the \textsf{paralist} package
+% offers commands
+% \begin{compactitem}
+%   \item that
+%   \begin{compactitem}
+%     \item are
+%     \begin{compactitem}
+%       \item better
+%       \begin{compactitem}
+%         \item suited
+%       \end{compactitem}
+%     \end{compactitem}
+%   \end{compactitem}
+% \end{compactitem}
+% \begin{compactenum}
+%   \item to
+%   \begin{compactenum}
+%     \item this
+%     \begin{compactenum}
+%       \item kind of
+%       \begin{compactenum}
+%         \item content.
+%       \end{compactenum}
+%     \end{compactenum}
+%   \end{compactenum}
+% \end{compactenum}
+
+% The \textsf{amsthm} package provides the commands necessary for the
+% typesetting of mathematical definitions, theorems, lemmas and
+% proofs.
+
+% %% We will define several mathematical sectioning commands.
+% \newtheorem{theorem}{Theorem}[section] %% The numbering of theorems
+%                               %% will be reset after each section.
+% \newtheorem{lemma}[theorem]{Lemma}         %% The numbering of lemmas
+% \newtheorem{corollary}[theorem]{Corollary} %% and corollaries will
+%                               %% share the counter with theorems.
+% \theoremstyle{definition}
+% \newtheorem{definition}{Definition}
+% \theoremstyle{remark}
+% \newtheorem*{remark}{Remark}
+
+% \begin{theorem}
+%   This is a theorem that offers a profound insight into the
+%   mathematical sectioning commands.
+% \end{theorem}
+% \begin{theorem}[Another theorem]
+%   This is another theorem. Unlike the first one, this theorem has
+%   been endowed with a name.
+% \end{theorem}
+% \begin{lemma}
+%   Let us suppose that $x^2+y^2=z^2$. Then
+%   \begin{equation}
+%     \biggl\langle u\biggm|\sum_{i=1}^nF(e_i,v)e_i\biggr\rangle
+%     =F\biggl(\sum_{i=1}^n\langle e_i|u\rangle e_i,v\biggr).
+%   \end{equation}
+% \end{lemma}
+% \begin{proof}
+%   $\nabla^2 f(x,y)=\frac{\partial^2f}{\partial x^2}+
+%   \frac{\partial^2f}{\partial y^2}$.
+% \end{proof}
+% \begin{corollary}
+%   This is a corollary.
+% \end{corollary}
+% \begin{remark}
+%   This is a remark.
+% \end{remark}
+
+% \begin{figure}
+%   \begin{center}
+%     \begin{minipage}{.66\textwidth}
+%       \includegraphics[width=\textwidth]{fithesis/logo/mu/fithesis-base.pdf}
+%     \end{minipage}
+%     \begin{minipage}{.33\textwidth}
+%       \includegraphics[width=\textwidth]{fithesis/logo/mu/fithesis-base.pdf} \\
+%       \includegraphics[width=\textwidth]{fithesis/logo/mu/fithesis-base.pdf}
+%     \end{minipage}
+%   \end{center}
+%   \caption{The logo of the Masaryk University at $\frac23$ and
+%     $\frac13$ of text width}
+%   \label{fig:mulogo2}
+% \end{figure}
+
+% \begin{table}
+%   \begin{tabularx}{\textwidth}{lllX}
+%     \toprule
+%     Day & Min Temp & Max Temp & Summary \\
+%     \midrule
+%     Monday & $13^{\circ}\mathrm{C}$ & $21^\circ\mathrm{C}$ & A
+%     clear day with low wind and no adverse current advisories. \\
+%     Tuesday & $11^{\circ}\mathrm{C}$ & $17^\circ\mathrm{C}$ & A
+%     trough of low pressure will come from the northwest. \\
+%     Wednesday & $10^{\circ}\mathrm{C}$ &
+%     $21^\circ\mathrm{C}$ & Rain will spread to all parts during the
+%     morning. \\
+%     \bottomrule
+%   \end{tabularx}
+%   \caption{A weather forecast}
+%   \label{tab:weather}
+% \end{table}
+
+% \chapter{Mathematical equations}
+% \label{chap:matheq}
+% \TeX{} comes pre-packed with the ability to typeset inline
+% equations, such as $\mathrm{e}^{ix}=\cos x+i\sin x$, and display
+% equations, such as \[
+%   \mathbf{A}^{-1} = \begin{bmatrix}
+%   a & b \\ c & d \\
+%   \end{bmatrix}^{-1} =
+%   \frac{1}{\det(\mathbf{A})} \begin{bmatrix}
+%   \,\,\,d & \!\!-b \\ -c & \,a \\
+%   \end{bmatrix} =
+%   \frac{1}{ad - bc} \begin{bmatrix}
+%   \,\,\,d & \!\!-b \\ -c & \,a \\
+%   \end{bmatrix}.
+% \] \LaTeX{} defines the automatically numbered \texttt{equation}
+% environment:
+% \begin{equation}
+%   \gamma Px = PAx = PAP^{-1}Px.
+% \end{equation}
+% The package \textsf{amsmath} provides several additional
+% environments that can be used to typeset complex equations:
+% \begin{enumerate}
+%   \item An equation can be spread over multiple lines using the
+%     \texttt{multline} environment:
+%     \begin{multline}
+%       a + b + c + d + e + f + b + c + d + e + f + b + c + d + e +
+% f \\
+%       + f + g + h + i + j + k + l + m + n + o + p + q
+%     \end{multline}
+
+%   \item Several aligned equations can be typeset using the
+%     \texttt{align} environment:
+%     \begin{align}
+%               a + b &= c + d     \\
+%                   u &= v + w + x \\[1ex]
+%       i + j + k + l &= m
+%     \end{align}
+
+%   \item The \texttt{alignat} environment is similar to
+%     \texttt{align}, but it doesn't insert horizontal spaces between
+%     the individual columns:
+%     \begin{alignat}{2}
+%       a + b + c &+ d       &   &= 0 \\
+%               e &+ f + g   &   &= 5
+%     \end{alignat}
+
+%   \item Much like chapter, sections, tables, figures, or list
+%     items, equations -- such as \eqref{eq:first} and
+%     \eqref{eq:mine} -- can also be labeled and referenced:
+%     \begin{alignat}{4}
+%       b_{11}x_1 &+ b_{12}x_2  &  &+ b_{13}x_3  &  &             &
+%         &= y_1,                   \label{eq:first} \\
+%       b_{21}x_1 &+ b_{22}x_2  &  &             &  &+ b_{24}x_4  &
+%         &= y_2. \tag{My equation} \label{eq:mine}
+%     \end{alignat}
+
+%   \item The \texttt{gather} environment makes it possible to
+%     typeset several equations without any alignment:
+%     \begin{gather}
+%       \psi = \psi\psi, \\
+%       \eta = \eta\eta\eta\eta\eta\eta, \\
+%       \theta = \theta.
+%     \end{gather}
+
+%   \item Several cases can be typeset using the \texttt{cases}
+%     environment:
+%     \begin{equation}
+%       |y| = \begin{cases}
+%         \phantom-y & \text{if }z\geq0, \\
+%                 -y & \text{otherwise}.
+%       \end{cases}
+%     \end{equation}
+% \end{enumerate}
+% For the complete list of environments and commands, consult the
+% \textsf{amsmath} package manual\footnote{
+%   See \url{http://mirrors.ctan.org/macros/latex/required/amslatex/math/amsldoc.pdf}.
+%   The \texttt{\textbackslash url} command is provided by the
+%   package \textsf{url}.
+% }.
+
+\printbibliography[heading=bibintoc] %% Print the bibliography.
+
+\makeatletter\thesis@blocks@clear\makeatother
+\phantomsection %% Print the index and insert it into the
+\addcontentsline{toc}{chapter}{\indexname} %% table of contents.
+\printindex
+
+\appendix %% Start the appendices.
+\chapter{An appendix}
+Here you can insert the appendices of your thesis.
+
+\end{document}

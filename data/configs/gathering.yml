@@ -12,7 +12,7 @@ search_repos:
   not_suitable_ids: 'not_suitable_ids.dat'
 
 compute_features:
-  features: 'configs/data_gathering/features.yml'
+  features: 'configs/features.yml'
   partial_upload_size: 10
   unmaintained:
     csv_file: 'unmaintained.csv'

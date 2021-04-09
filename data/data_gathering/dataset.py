@@ -15,7 +15,7 @@ from github.GithubException import (
 
 from data_gathering import GIT_INSTANCE, logger_config_values
 from .enums import EndCondition
-from logger import logger_file_name, setup_logger
+from .logger import logger_file_name, setup_logger
 from .repository_data import RepositoryData
 from .s3_handler import S3Handler
 from .waiting import NoAPICalls, wait_for_api_calls
