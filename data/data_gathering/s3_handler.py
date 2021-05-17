@@ -47,8 +47,10 @@ class S3Handler:
             return False
 
     def upload_file(
-        self, file_name: str, logger: Logger, prefix: str = ''
+        self, file_name: str, logger: Logger, prefix: Optional[str] = None
     ) -> None:
+        if not prefix:
+            prefix = ''
         object_name_ts = self.append_time_stamp(s=file_name)
         self.client.upload_file(
             file_name, _BUCKET_NAME, prefix + object_name_ts
@@ -56,7 +58,7 @@ class S3Handler:
         logger.debug(msg=f'File uploaded: {object_name_ts}, prefix: {prefix}')
 
     def delete_oldest_object(
-        self, file_name: str, logger: Logger, prefix: str = ''
+        self, file_name: str, logger: Logger, prefix: Optional[str] = None
     ) -> None:
         """Deletes oldest object in the bucket with given file name.
 
@@ -67,6 +69,8 @@ class S3Handler:
         Args:
             file_name: Name of the file to be uploaded.
         """
+        if not prefix:
+            prefix = ''
         file_tuples_list = [
             (obj_name, self.extract_time_stamp(s=obj_name))
             for obj_name in self.list_objects_in_bucket(prefix=prefix)
@@ -111,10 +115,13 @@ class S3Handler:
             logger.debug(msg=f'File downloaded: {obj_to_download}')
         else:
             logger.debug(msg='No file to download found')
-            # todo raise some exception if file does not exist
             pass
 
-    def list_objects_in_bucket(self, prefix: str = '') -> List[Optional[str]]:
+    def list_objects_in_bucket(
+        self, prefix: Optional[str] = None
+    ) -> List[Optional[str]]:
+        if not prefix:
+            prefix = ''
         try:
             return [
                 obj['Key'] for obj in self.client.list_objects(

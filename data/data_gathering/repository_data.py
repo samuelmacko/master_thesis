@@ -332,7 +332,6 @@ class RepositoryData:
         commits_after = self._repo.get_commits(since=threshold_date)
         contributors_old = set()
         contributors_new = set()
-# ! todo zluuucit!!
         for commit in commits_before:
             name = commit.commit.author.name
             if name not in contributors_old:
@@ -421,7 +420,6 @@ class RepositoryData:
                 workforce += labor / (e - j + 1)
 
             cont_workforces.append(workforce)
-        # return median(cont_workforces)
         return sum(cont_workforces) / len(cont_workforces)
 
     def wealth(self, weeks: int = 104) -> float:
@@ -503,7 +501,6 @@ class RepositoryData:
 
     def suitable(self) -> bool:
         try:
-            # if self.development_time() < 730:
             if self.age() < 730:
                 return False
             if not self.in_programming_language():
@@ -531,15 +528,6 @@ class RepositoryData:
         rate_limit_exceeded = False
         while feature_index < features_len:
             try:
-                # if features[feature_index] == 'issues_count':
-                #     row.append(self.issues_count(state='open'))
-                #     row.append(self.issues_count(state='closed'))
-
-                # elif features[feature_index] == 'pulls_count':
-                #     row.append(self.pulls_count(state='open'))
-                #     row.append(self.pulls_count(state='closed'))
-
-                # else:
                 row.append(getattr(self, features[feature_index])())
 
                 logger.info(
