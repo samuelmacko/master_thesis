@@ -60,13 +60,11 @@ class RepositoryData:
                 counter += 1
         return counter
 
-    # todo fix weeks
     def pulls_count_open(self, weeks: int = 104) -> int:
-        return self.pulls_count(state='open')
+        return self.pulls_count(state='open', weeks=weeks)
 
-    # todo fix weeks
     def pulls_count_closed(self, weeks: int = 104) -> int:
-        return self.pulls_count(state='closed')
+        return self.pulls_count(state='closed', weeks=weeks)
 
     def issues_count(self, state: str = 'open', weeks: int = 104) -> int:
         if state == 'open' or state == 'closed':
@@ -81,13 +79,11 @@ class RepositoryData:
                 counter += 1
         return counter
 
-    # todo fix weeks
     def issues_count_open(self, weeks: int = 104) -> int:
-        return self.issues_count(state='open')
+        return self.issues_count(state='open', weeks=weeks)
 
-    # todo fix weeks
     def issues_count_closed(self, weeks: int = 104) -> int:
-        return self.issues_count(state='closed')
+        return self.issues_count(state='closed', weeks=weeks)
 
     def commits_count(self, weeks: int = 104) -> int:
         threshold_date = self.threshold_datetime(weeks=weeks)
