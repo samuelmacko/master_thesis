@@ -12,4 +12,4 @@ RUN pip install pipenv && \
     pipenv install --system --deploy && \
     chmod 777 -R ${PROJECT_DIR}
 
-ENTRYPOINT [ "python", "main.py", "--search-repos" ]
+ENTRYPOINT [ "python", "main.py", "--search-repos", "--type=maintained" ]
