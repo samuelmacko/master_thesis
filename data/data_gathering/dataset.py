@@ -357,13 +357,10 @@ class Dataset:
 
         finally:
             remaining_ids = repo_ids - computed_ids
-            self.save_all(
+            self.save_and_upload_all(
                 file_set_tuples=[(ids_file_name, remaining_ids)],
-                logger=logger
-            )
-            self.upload_all(
-                file_names=[csv_file_name, ids_file_name, logger_file],
-                region_name=region_name, file_name_prefix=file_name_prefix,
-                logger=logger
+                other_files=[csv_file_name, logger_file], logger=logger,
+                region_name=region_name,
+                file_name_prefix=file_name_prefix
             )
             logger.info(msg='End of the search')
