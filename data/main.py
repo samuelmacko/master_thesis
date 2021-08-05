@@ -25,6 +25,12 @@ parser.add_argument(
          '  - end_value         - value of the end condition'
 )
 parser.add_argument(
+    '-t', '--type', action='store', choices=['maintained', 'unmaintained'],
+    dest='type',
+    help='todo'
+)
+
+parser.add_argument(
     '-c', '--compute-features', dest='compute',
     help='Compute features for repositories and store results in \n' +
          'corresponding .csv files' +
@@ -51,7 +57,16 @@ dataset = Dataset()
 
 s3_config_values = config_values['s3_handling']
 if args.search:
+    if not args.type:
+        print('--type argument is required')
+        exit(1)
+
     search_config_values = config_values['search_repos']
+    if args.type == 'maintained':
+        query = search_config_values['queries']['maintained']
+    else:
+        query = search_config_values['queries']['unmaintained']
+
     dataset.search_repos(
         end_condition=search_config_values['end_condition'],
         value=search_config_values['end_value'],
@@ -63,7 +78,7 @@ if args.search:
         not_suitable_ids_file=search_config_values['not_suitable_ids'],
         file_name_prefix=s3_config_values['file_name_prefix'],
         region_name=s3_config_values['region'],
-        logger_name=search_config_values['logger_file']
+        logger_name=search_config_values['logger_file'], query=query
     )
 
 elif args.compute:

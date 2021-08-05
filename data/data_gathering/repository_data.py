@@ -4,7 +4,7 @@ from logging import Logger
 from math import ceil
 from os import path
 from re import compile
-from typing import Any, List, Optional, Set, Union
+from typing import Any, List, Optional, Set, Tuple
 from yaml import safe_load
 
 from dateutil.relativedelta import relativedelta
@@ -60,9 +60,11 @@ class RepositoryData:
                 counter += 1
         return counter
 
+    # todo fix weeks
     def pulls_count_open(self, weeks: int = 104) -> int:
         return self.pulls_count(state='open')
 
+    # todo fix weeks
     def pulls_count_closed(self, weeks: int = 104) -> int:
         return self.pulls_count(state='closed')
 
@@ -79,9 +81,11 @@ class RepositoryData:
                 counter += 1
         return counter
 
+    # todo fix weeks
     def issues_count_open(self, weeks: int = 104) -> int:
         return self.issues_count(state='open')
 
+    # todo fix weeks
     def issues_count_closed(self, weeks: int = 104) -> int:
         return self.issues_count(state='closed')
 
@@ -210,15 +214,15 @@ class RepositoryData:
         with open('configs/vendor.yml', 'r') as vendor_file:
             vendor_regexes = safe_load(vendor_file)
         regexes = [compile(regex) for regex in vendor_regexes]
-        for dir in dirs:
-            if any([rgx.match(dir) for rgx in regexes]):
-                dirs.remove(dir)
+        for dir_name in dirs:
+            if any([rgx.match(dir_name) for rgx in regexes]):
+                dirs.remove(dir_name)
         return dirs
 
     def _get_dirs(self) -> List[str]:
         dirs = self._filter_dirs(dirs=[
-            dir.path for dir in self._repo.get_contents(path='')
-            if dir.type == 'dir'
+            dir_name.path for dir_name in self._repo.get_contents(path='')
+            if dir_name.type == 'dir'
         ])
         if len(dirs) == 0:
             return dirs
@@ -226,8 +230,8 @@ class RepositoryData:
         i = 0
         while i < len(dirs):
             subdirs = self._filter_dirs(dirs=[
-                dir.path for dir in self._repo.get_contents(path=dirs[i])
-                if dir.type == 'dir'
+                dir_name.path for dir_name in self._repo.get_contents(path=dirs[i])
+                if dir_name.type == 'dir'
             ])
             dirs += subdirs
             i += 1
@@ -239,9 +243,9 @@ class RepositoryData:
 
     def _get_files(self) -> List[str]:
         files = []
-        for dir in self._get_dirs():
+        for dir_name in self._get_dirs():
             files.extend([
-                file.path for file in self._repo.get_contents(path=dir)
+                file.path for file in self._repo.get_contents(path=dir_name)
                 if file.type == 'file'
             ])
 
@@ -326,7 +330,7 @@ class RepositoryData:
 
     def _contributors_divided(
         self, threshold: int = 104
-    ) -> Union[Set[str], Set[str]]:
+    ) -> Tuple[Set[str], Set[str]]:
         threshold_date = self.threshold_datetime(weeks=threshold)
         commits_before = self._repo.get_commits(until=threshold_date)
         commits_after = self._repo.get_commits(since=threshold_date)

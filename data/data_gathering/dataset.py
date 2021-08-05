@@ -1,14 +1,15 @@
-
+import random
 from csv import writer
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from logging import Logger
 from marshal import dump, load
 from pathlib import Path
-from random import randrange
+from random import randrange, sample
 from typing import Any, List, Optional, Set, Tuple
+
 from yaml import safe_load
 
-from github import Github
+from github import Github, PaginatedList, Repository
 from github.GithubException import (
     GithubException, RateLimitExceededException, UnknownObjectException
 )
@@ -65,17 +66,20 @@ class Dataset:
             return set()
 
     @staticmethod
-    def id_generator(min_id: int, max_id: int) -> int:
-        return randrange(min_id, max_id)
+    def random_date(from_date: date, to_date: date) -> date:
+        delta = to_date - from_date
+        offset_day = randrange(delta.days)
+        return from_date + timedelta(days=offset_day)
 
-    def get_boundaries(self, from_date: date, to_date: date) -> (int, int):
-        from_id = self._git.search_repositories(
-            query=from_date.__str__()
-        )[0].id
-        to_id = self._git.search_repositories(
-            query=to_date.__str__()
-        )[0].id
-        return from_id, to_id
+    def get_random_repos_ids(
+            self, query: str, n: Optional[int] = None
+    ) -> List[int]:
+        repos = list(self._git.search_repositories(query=query))
+
+        if n:
+            return [repo.id for repo in sample(repos, n)]
+        else:
+            return [repo.id for repo in repos]
 
     def save_all(
         self, file_set_tuples: List[Tuple[str, set]], logger: Logger
@@ -84,8 +88,9 @@ class Dataset:
             self.save_visited_ids(dat_file=tup[0], ids_set=tup[1])
         logger.info(msg='IDs saved to files')
 
+    @staticmethod
     def upload_all(
-        self, file_name_prefix: str, file_names: List[str], region_name: str,
+        file_name_prefix: str, file_names: List[str], region_name: str,
         logger: Logger
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
@@ -102,8 +107,37 @@ class Dataset:
             )
         logger.info(msg='IDs files uploaded to the S3 bucket')
 
+    def save_and_upload_all(
+            self, file_set_tuples: List[Tuple[str, set]],
+            other_files: Optional[List[str]], logger: Logger,
+            region_name: str, file_name_prefix: str
+    ) -> None:
+        file_names = [file_name[0] for file_name in file_set_tuples]
+        if other_files:
+            file_names += other_files
+
+        self.save_all(file_set_tuples=file_set_tuples, logger=logger)
+        self.upload_all(
+            file_name_prefix=file_name_prefix, file_names=file_names,
+            region_name=region_name, logger=logger
+        )
+
+    @staticmethod
+    def already_visited(
+            repo_id: int, id_sets: Optional[List[Set[int]]] = None
+    ) -> bool:
+        try:
+            for id_set in id_sets:
+                if repo_id in id_set:
+                    return True
+            return False
+
+        except TypeError:
+            return False
+
+    @staticmethod
     def download_all(
-        self, region_name: str, file_names: List[str], logger: Logger,
+        region_name: str, file_names: List[str], logger: Logger,
         file_name_prefix: str = ''
     ) -> None:
         s3_handler = S3Handler(region_name=region_name)
@@ -121,7 +155,7 @@ class Dataset:
             unmaintained_ids_file: str, maintained_ids_file: str,
             not_suitable_ids_file: str,
             end_condition: EndCondition, value: int,
-            region_name: str, file_name_prefix: str,
+            region_name: str, file_name_prefix: str, query: str,
             partial_upload_size: int = 10
     ) -> None:
         logger = setup_logger(
@@ -145,6 +179,11 @@ class Dataset:
         not_suitable_ids = self.load_visited_ids(
             dat_file=not_suitable_ids_file, logger=logger
         )
+        file_set_tuples = [
+            (unmaintained_ids_file, unmaintained_ids),
+            (maintained_ids_file, maintained_ids),
+            (not_suitable_ids_file, not_suitable_ids)
+        ]
 
         from_year_date = datetime.strptime(from_year, '%Y').date()
         to_year_date = datetime.strptime(to_year, '%Y').date()
@@ -159,66 +198,59 @@ class Dataset:
         try:
             while len(eval(EndCondition[end_condition].value)) < value:
                 try:
-                    while True:
-                        from_id, to_id = self.get_boundaries(
-                            from_date=from_year_date, to_date=to_year_date
-                        )
-                        generated_id = self.id_generator(
-                            min_id=from_id, max_id=to_id
-                        )
-                        if (
-                                generated_id not in unmaintained_ids and
-                                generated_id not in maintained_ids and
-                                generated_id not in not_suitable_ids
+                    random_date = self.random_date(
+                        from_date=from_year_date,
+                        to_date=to_year_date
+                    )
+                    logger.debug(msg=f'random date: {random_date}')
+                    repos_ids = self.get_random_repos_ids(
+                        query=query.format(date=random_date), n=5
+                    )
+
+                    for repo_id in repos_ids:
+                        if self.already_visited(
+                                repo_id=repo_id, id_sets=[
+                                    unmaintained_ids, maintained_ids,
+                                    not_suitable_ids
+                                ]
                         ):
-                            break
+                            continue
 
-                    repo = self._git.get_repo(full_name_or_id=generated_id)
-                    repo_data.set_repo(repo=repo)
+                        repo = self._git.get_repo(full_name_or_id=repo_id)
+                        repo_data.set_repo(repo=repo)
 
-                    if repo_data.suitable():
-                        if repo_data.unmaintained():
-                            unmaintained_ids.add(generated_id)
-                            unmaintained_count += 1
-                            logger.info(
-                                msg='Added unmaintained repo ID: ' +
-                                    f'{generated_id}, ' +
-                                    f'rank: {unmaintained_count}'
-                            )
+                        if repo_data.suitable():
+                            if repo_data.unmaintained():
+                                unmaintained_ids.add(repo_id)
+                                unmaintained_count += 1
+                                logger.info(
+                                    msg='Added unmaintained repo ID: ' +
+                                        f'{repo_id}, ' +
+                                        f'rank: {unmaintained_count}'
+                                )
+                            else:
+                                maintained_ids.add(repo_id)
+                                maintained_count += 1
+                                logger.info(
+                                    msg='Added maintained repo ID: ' +
+                                        f'{repo_id}, ' +
+                                        f'rank: {maintained_count}'
+                                )
                         else:
-                            maintained_ids.add(generated_id)
-                            maintained_count += 1
+                            not_suitable_ids.add(repo_id)
                             logger.info(
-                                msg='Added maintained repo ID: ' +
-                                    f'{generated_id}, ' +
-                                    f'rank: {maintained_count}'
+                                msg=f'Added not suitable repo ID: {repo_id}'
                             )
-                    else:
-                        not_suitable_ids.add(generated_id)
-                        logger.info(
-                            msg=f'Added not suitable repo ID: {generated_id}'
-                        )
-                    repo_analyzed_counter += 1
-                    if repo_analyzed_counter == partial_upload_size:
-                        repo_analyzed_counter = 0
-                        logger.info(msg='Partial save and upload')
-                        self.save_all(
-                            file_set_tuples=[
-                                (unmaintained_ids_file, unmaintained_ids),
-                                (maintained_ids_file, maintained_ids),
-                                (not_suitable_ids_file, not_suitable_ids)
-                            ],
-                            logger=logger
-                        )
-                        self.upload_all(
-                            file_names=[
-                                unmaintained_ids_file, maintained_ids_file,
-                                not_suitable_ids_file, logger_file
-                            ],
-                            region_name=region_name,
-                            file_name_prefix=file_name_prefix,
-                            logger=logger
-                        )
+                        repo_analyzed_counter += 1
+                        if repo_analyzed_counter == partial_upload_size:
+                            repo_analyzed_counter = 0
+                            logger.info(msg='Partial save and upload')
+                            self.save_and_upload_all(
+                                file_set_tuples=file_set_tuples,
+                                other_files=[logger_file], logger=logger,
+                                region_name=region_name,
+                                file_name_prefix=file_name_prefix
+                            )
 
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
@@ -227,9 +259,9 @@ class Dataset:
                     )
                     continue
                 except UnknownObjectException:
-                    not_suitable_ids.add(generated_id)
+                    not_suitable_ids.add(repo_id)
                     logger.info(
-                        msg=f'Added not suitable repo ID: {generated_id}'
+                        msg=f'Added not suitable repo ID: {repo_id}'
                     )
                     continue
                 except GithubException:
@@ -240,21 +272,11 @@ class Dataset:
                     return
 
         finally:
-            self.save_all(
-                file_set_tuples=[
-                    (unmaintained_ids_file, unmaintained_ids),
-                    (maintained_ids_file, maintained_ids),
-                    (not_suitable_ids_file, not_suitable_ids)
-                ],
-                logger=logger
-            )
-            self.upload_all(
-                file_names=[
-                    unmaintained_ids_file, maintained_ids_file,
-                    not_suitable_ids_file, logger_file
-                ],
-                region_name=region_name, file_name_prefix=file_name_prefix,
-                logger=logger
+            self.save_and_upload_all(
+                file_set_tuples=file_set_tuples,
+                other_files=[logger_file], logger=logger,
+                region_name=region_name,
+                file_name_prefix=file_name_prefix
             )
             logger.info(msg='End of the search')
 

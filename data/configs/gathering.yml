@@ -11,6 +11,10 @@ search_repos:
   maintained_ids: 'maintained_ids.dat'
   not_suitable_ids: 'not_suitable_ids.dat'
 
+  queries:
+    maintained: 'created:{date} pushed:>2020-01-01 archived:false'
+    unmaintained: 'created:{date} pushed:<2020-01-01'
+
 compute_features:
   features: 'configs/features.yml'
   partial_upload_size: 10
