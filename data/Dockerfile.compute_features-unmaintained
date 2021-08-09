@@ -2,7 +2,7 @@ FROM quay.io/thoth-station/s2i-thoth-f32-py38
 
 MAINTAINER Samuel Macko "samuel.macko.sm@gmail.com"
 
-ENV PROJECT_DIR=/tmp/thesis_app 
+ENV PROJECT_DIR=/tmp/thesis_app/data
 
 WORKDIR ${PROJECT_DIR}
 
