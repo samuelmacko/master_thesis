@@ -111,7 +111,7 @@ objects:
   - apiVersion: batch/v1
     kind: Job
     metadata:
-      name: sm-master-thesis-search
+      name: sm-master-thesis-search-maint
       labels:
         app: samuelmacko-master-thesis
     spec:
@@ -161,7 +161,7 @@ objects:
     metadata:
       labels:
         app: samuelmacko-master-thesis
-      name: samuelmacko-master-thesis-unmaintained
+      name: samuelmacko-master-thesis-unmaint
     spec:
       name: latest
       lookupPolicy:
@@ -172,7 +172,7 @@ objects:
     metadata:
       labels:
         app: samuelmacko-master-thesis
-      name: samuelmacko-master-thesis-search-maintained
+      name: samuelmacko-master-thesis-search-maint
     spec:
       name: latest
       lookupPolicy:
@@ -183,7 +183,7 @@ objects:
     metadata:
       labels:
         app: samuelmacko-master-thesis
-      name: samuelmacko-master-thesis-search-unmaintained
+      name: samuelmacko-master-thesis-search-unmaint
     spec:
       name: latest
       lookupPolicy:
