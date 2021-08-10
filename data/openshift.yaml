@@ -202,6 +202,7 @@ objects:
           name: samuelmacko-master-thesis-maintained:latest
       source:
         type: Git
+        contextDir: data
         git:
           uri: https://github.com/samuelmacko/master_thesis
           ref: master
@@ -214,7 +215,7 @@ objects:
           cpu: 1
       strategy:
         dockerStrategy:
-          dockerfilePath: data/Dockerfile.compute_features-maintained
+          dockerfilePath: Dockerfile.compute_features-maintained
 
   - kind: BuildConfig
     apiVersion: build.openshift.io/v1
@@ -229,6 +230,7 @@ objects:
           name: samuelmacko-master-thesis-search-maint:latest
       source:
         type: Git
+        contextDir: data
         git:
           uri: https://github.com/samuelmacko/master_thesis
           ref: master
@@ -241,7 +243,7 @@ objects:
           cpu: 1
       strategy:
         dockerStrategy:
-          dockerfilePath: data/Dockerfile.search_repos-maintained
+          dockerfilePath: Dockerfile.search_repos-maintained
 
   - kind: BuildConfig
     apiVersion: build.openshift.io/v1
@@ -256,6 +258,7 @@ objects:
           name: samuelmacko-master-thesis-search-unmaint:latest
       source:
         type: Git
+        contextDir: data
         git:
           uri: https://github.com/samuelmacko/master_thesis
           ref: master
@@ -268,7 +271,7 @@ objects:
           cpu: 1
       strategy:
         dockerStrategy:
-          dockerfilePath: data/Dockerfile.search_repos-unmaintained
+          dockerfilePath: Dockerfile.search_repos-unmaintained
 
   - kind: BuildConfig
     apiVersion: build.openshift.io/v1
@@ -283,6 +286,7 @@ objects:
           name: samuelmacko-master-thesis-unmaintained:latest
       source:
         type: Git
+        contextDir: data
         git:
           uri: https://github.com/samuelmacko/master_thesis
           ref: master
@@ -295,4 +299,4 @@ objects:
           cpu: 1
       strategy:
         dockerStrategy:
-          dockerfilePath: data/Dockerfile.compute_features-unmaintained
+          dockerfilePath: Dockerfile.compute_features-unmaintained
