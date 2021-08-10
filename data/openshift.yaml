@@ -125,7 +125,44 @@ objects:
           automountServiceAccountToken: false
           containers:
             - name: main
-              image: samuelmacko-master-thesis-search
+              image: samuelmacko-master-thesis-search-maint
+              env:
+                - name: GITHUB_ACCESS_TOKEN
+                  value: "${GITHUB_ACCESS_TOKEN_UNMAINT}"
+                - name: AWS_ACCESS_KEY_ID
+                  value: "${AWS_ACCESS_KEY_ID}"
+                - name: AWS_SECRET_ACCESS_KEY
+                  value: "${AWS_SECRET_ACCESS_KEY}"
+                - name: BUCKET_NAME
+                  value: "${BUCKET_NAME}"
+                - name: ENDPOINT_URL
+                  value: "${ENDPOINT_URL}"
+              resources:
+                limits:
+                  memory: "2Gi"
+                  cpu: 1
+                requests:
+                  memory: "2Gi"
+                  cpu: 1
+
+  - apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: sm-master-thesis-search-unmaint
+      labels:
+        app: samuelmacko-master-thesis
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: samuelmacko-master-thesis
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          containers:
+            - name: main
+              image: samuelmacko-master-thesis-search-unmaint
               env:
                 - name: GITHUB_ACCESS_TOKEN
                   value: "${GITHUB_ACCESS_TOKEN_UNMAINT}"
