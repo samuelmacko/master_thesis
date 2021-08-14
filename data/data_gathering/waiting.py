@@ -25,7 +25,7 @@ def wait_for_api_calls(
         else:
             logger.debug(
                 msg=f'No API calls received in attempt {i} /' +
-                '{number_of_attempts}'
+                f'{number_of_attempts}'
             )
 
     raise NoAPICalls('No API calls received')
