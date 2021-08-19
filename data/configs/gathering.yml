@@ -1,7 +1,7 @@
 
 search_repos:
   end_condition: 'Maintained'
-  end_value: 1000
+  end_value: 10000
   from_year: '2011'
   to_year: '2019'
   partial_upload_size: 10
