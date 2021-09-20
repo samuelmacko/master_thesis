@@ -1,0 +1,15 @@
+
+all_cols_to_drop:
+  - 'repo_name'
+  - 'url'
+
+all_cols_to_encode:
+  - 'owner_type'
+  - 'has_test'
+  - 'has_doc'
+  - 'has_example'
+  - 'has_readme'
+
+split:
+  size: 0.2
+  random_state: 2

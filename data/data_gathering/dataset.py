@@ -1,4 +1,4 @@
-import random
+
 from csv import writer
 from datetime import date, datetime, timedelta
 from logging import Logger
@@ -6,7 +6,6 @@ from marshal import dump, load
 from pathlib import Path
 from random import randrange, sample
 from typing import Any, List, Optional, Set, Tuple
-
 from yaml import safe_load
 
 from github import Github, PaginatedList, Repository
