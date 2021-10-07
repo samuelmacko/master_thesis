@@ -87,10 +87,10 @@ class RepositoryData:
 
     def commits_count(self, weeks: int = 104) -> int:
         threshold_date = self.threshold_datetime(weeks=weeks)
-        return self._repo.get_commits(since=threshold_date).totalCount
+        return len(self._repo.get_commits(since=threshold_date))
 
     def branches_count(self) -> int:
-        return self._repo.get_branches().totalCount
+        return len(self._repo.get_branches())
 
     def releases_count(self, weeks: int = 104) -> int:
         releases = self._repo.get_releases()
@@ -170,7 +170,7 @@ class RepositoryData:
                 dtime=contributor.created_at
             )
 
-        contributors_count = contributors.totalCount
+        contributors_count = len(contributors)
         # not really sure why or how this happens, but sometimes, it happens
         if contributors_count == 0:
             return 0
@@ -294,7 +294,7 @@ class RepositoryData:
         count = 0
         for contributor in contributors:
             count += contributor.followers
-        contributors_count = contributors.totalCount
+        contributors_count = len(contributors)
         if contributors_count == 0:
             return 0
         else:
@@ -305,7 +305,7 @@ class RepositoryData:
         count = 0
         for contributor in contributors:
             count += contributor.following
-        contributors_count = contributors.totalCount
+        contributors_count = len(contributors)
         if contributors_count == 0:
             return 0
         else:
