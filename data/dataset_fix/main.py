@@ -1,14 +1,13 @@
 
 from csv import reader as csv_reader, writer as csv_writer
-from typing import List
+from typing import List, Tuple
 
 from data_gathering import GIT_INSTANCE
 from data_gathering.logger import setup_logger
-from data_gathering.repository_data import RepositoryData
 from data_gathering.waiting import NoAPICalls, wait_for_api_calls
 
 from github import (
-    GithubException, RateLimitExceededException, UnknownObjectException
+    Github, GithubException, RateLimitExceededException, UnknownObjectException
 )
 
 
@@ -36,7 +35,25 @@ def save_all() -> None:
     )
 
 
-rd = RepositoryData(git=GIT_INSTANCE)
+def suitable(git: Github, repo_name: str) -> Tuple[int, bool]:
+    if 'dotfile' in repo_name:
+        return 1, False
+
+    repo = git.get_repo(full_name_or_id=repo_name)
+
+    if len(list(repo.get_commits())) < 20:
+        return 2, False
+    elif len(list(repo.get_contributors())) < 3:
+        return 3, False
+
+    return 0, True
+
+
+not_suitable_counter = {
+    'dotfile': 0,
+    'commits': 0,
+    'contributors': 0,
+}
 
 logger = setup_logger(
     name=__name__, file='dataset_fix/dataset_fix.log',
@@ -59,25 +76,31 @@ for dataset in datasets:
         row_counter = 0
 
     try:
-        for i, row in enumerate(matrix[1:]):
+        for row in matrix[1:]:
             try:
                 row_counter += 1
-                logger.debug(
-                    msg=f'Started computing row: {row_counter} / {rows_count}'
+                logger.info(
+                    msg=f'Started computing repository: {row[0]}, row: {row_counter} / {rows_count}'
                 )
 
-                rd.set_repo(repo_name_or_id=row[0])
+                code, suit = suitable(git=GIT_INSTANCE, repo_name=row[0])
+                if suit:
+                    matrix_updated.append(row)
+                else:
+                    if code == 1:
+                        not_suitable_counter['dotfile'] += 1
+                    elif code == 2:
+                        not_suitable_counter['commits'] += 1
+                    elif code == 3:
+                        not_suitable_counter['contributors'] += 1
 
-                row[6] = rd.commits_count()
-                row[7] = rd.branches_count()
-                row[15] = rd.avg_dev_account_age()
-                row[23] = rd.devs_followers_avg()
-                row[24] = rd.devs_following_avg()
+                    logger.info(
+                        msg=f'Repository: {row[0]} is not suitable {not_suitable_counter}'
+                    )
 
-                matrix_updated.append(row)
                 del matrix[1]
 
-                if i % 10 == 0:
+                if row_counter % 10 == 0:
                     logger.info(msg='Saving files')
                     save_all()
                     matrix_updated = []
