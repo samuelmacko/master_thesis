@@ -87,10 +87,10 @@ class RepositoryData:
 
     def commits_count(self, weeks: int = 104) -> int:
         threshold_date = self.threshold_datetime(weeks=weeks)
-        return len(self._repo.get_commits(since=threshold_date))
+        return len(list(self._repo.get_commits(since=threshold_date)))
 
     def branches_count(self) -> int:
-        return len(self._repo.get_branches())
+        return len(list(self._repo.get_branches()))
 
     def releases_count(self, weeks: int = 104) -> int:
         releases = self._repo.get_releases()
@@ -163,7 +163,7 @@ class RepositoryData:
         return (datetime.now() - dtime).days
 
     def avg_dev_account_age(self) -> float:
-        contributors = self._repo.get_contributors()
+        contributors = list(self._repo.get_contributors())
         collective_age = 0
         for contributor in contributors:
             collective_age += self.datetime_to_days(
@@ -290,7 +290,7 @@ class RepositoryData:
         return self._repo.owner.followers
 
     def devs_followers_avg(self) -> float:
-        contributors = self._repo.get_contributors()
+        contributors = list(self._repo.get_contributors())
         count = 0
         for contributor in contributors:
             count += contributor.followers
@@ -301,7 +301,7 @@ class RepositoryData:
             return count / contributors_count
 
     def devs_following_avg(self) -> float:
-        contributors = self._repo.get_contributors()
+        contributors = list(self._repo.get_contributors())
         count = 0
         for contributor in contributors:
             count += contributor.following
