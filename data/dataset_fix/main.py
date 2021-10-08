@@ -41,9 +41,9 @@ def suitable(git: Github, repo_name: str) -> Tuple[int, bool]:
 
     repo = git.get_repo(full_name_or_id=repo_name)
 
-    if len(list(repo.get_commits())) < 20:
-        return 2, False
-    elif len(list(repo.get_contributors())) < 3:
+    # if len(list(repo.get_commits())) < 20:
+    #     return 2, False
+    if len(list(repo.get_contributors())) < 3:
         return 3, False
 
     return 0, True
@@ -84,13 +84,14 @@ for dataset in datasets:
                 )
 
                 code, suit = suitable(git=GIT_INSTANCE, repo_name=row[0])
+
                 if suit:
                     matrix_updated.append(row)
                 else:
                     if code == 1:
                         not_suitable_counter['dotfile'] += 1
-                    elif code == 2:
-                        not_suitable_counter['commits'] += 1
+                    # elif code == 2:
+                    #     not_suitable_counter['commits'] += 1
                     elif code == 3:
                         not_suitable_counter['contributors'] += 1
 
