@@ -15,7 +15,11 @@ def wait_for_api_calls(
 ) -> None:
     for i in range(number_of_attempts):
         waiting_time = time_to_wait(timestamp=git.rate_limiting_resettime) + 30
-        logger.info(msg=f'Waiting for {waiting_time} seconds')
+
+        if waiting_time > 3000:
+            waiting_time = 3000
+
+        logger.info(msg=f'Waiting for {waiting_time / 60} minutes')
         sleep(waiting_time)
 
         api_calls = git.get_rate_limit().core.remaining
