@@ -1,5 +1,6 @@
 
 from csv import reader as csv_reader, writer as csv_writer
+from datetime import datetime
 from typing import List, Tuple
 
 from data_gathering import GIT_INSTANCE
@@ -26,11 +27,11 @@ def save_matrix(
 
 def save_all() -> None:
     save_matrix(
-        file_name=f'dataset_fix/dataset/{dataset}_updated.csv',
-        matrix=matrix_updated, append=True
+        file_name=f'dataset_fix/dataset/{dataset}_extended.csv',
+        matrix=matrix_extended, append=True
     )
     save_matrix(
-        file_name=f'dataset_fix/dataset/{dataset}.csv',
+        file_name=f'dataset_fix/dataset/{dataset}_updated.csv',
         matrix=matrix
     )
 
@@ -47,6 +48,26 @@ def suitable(git: Github, repo_name: str) -> Tuple[int, bool]:
         return 3, False
 
     return 0, True
+
+
+COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+
+
+def repository_age_in_days(git: Github, repo_name: str) -> int:
+    repo = git.get_repo(full_name_or_id=repo_name)
+    commits = repo.get_commits()
+
+    first_commit = datetime.strptime(
+        commits.reversed[0].last_modified,
+        COMMIT_LAST_MODIFIED_FORMAT
+    )
+
+    last_commit = datetime.strptime(
+        commits[0].last_modified,
+        COMMIT_LAST_MODIFIED_FORMAT
+    )
+
+    return (last_commit - first_commit).days
 
 
 not_suitable_counter = {
@@ -66,11 +87,11 @@ for dataset in datasets:
     logger.info(msg=f'Started computing {dataset} dataset')
 
     with open(
-        f'dataset_fix/dataset/{dataset}.csv', newline=''
+        f'dataset_fix/dataset/{dataset}_updated.csv', newline=''
     ) as input_csv_file:
         reader = csv_reader(input_csv_file, delimiter=',')
         matrix = list(reader)
-        matrix_updated = []
+        matrix_extended = []
 
         rows_count = len(matrix)
         row_counter = 0
@@ -83,21 +104,12 @@ for dataset in datasets:
                     msg=f'Started computing repository: {row[0]}, row: {row_counter} / {rows_count}'
                 )
 
-                code, suit = suitable(git=GIT_INSTANCE, repo_name=row[0])
+                time_delta = repository_age_in_days(
+                    git=GIT_INSTANCE, repo_name=row[0]
+                )
 
-                if suit:
-                    matrix_updated.append(row)
-                else:
-                    if code == 1:
-                        not_suitable_counter['dotfile'] += 1
-                    # elif code == 2:
-                    #     not_suitable_counter['commits'] += 1
-                    elif code == 3:
-                        not_suitable_counter['contributors'] += 1
-
-                    logger.info(
-                        msg=f'Repository: {row[0]} is not suitable {not_suitable_counter}'
-                    )
+                matrix[1].append(time_delta)
+                matrix_extended.append(matrix[1])
 
                 del matrix[1]
 
