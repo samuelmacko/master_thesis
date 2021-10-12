@@ -13,7 +13,6 @@
 - forks_count
 - stargazers_count
 - development_time
-# - max_days_without_commit
 - owner_account_age
 - avg_dev_account_age
 - has_test

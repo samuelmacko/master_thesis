@@ -42,7 +42,10 @@ class RepositoryData:
         self._files = None
         self._dirs = None
 
-    def pulls_count(self, state: str = 'open', weeks: int = 104) -> int:
+    def pulls_count(
+        self, until: Optional[datetime] = None, days: int = 730,
+        state: str = 'open'
+    ) -> int:
         if state == 'open' or state == 'closed':
             pulls = self._repo.get_pulls(state=state)
         elif state == 'merged':
@@ -54,50 +57,77 @@ class RepositoryData:
             raise ValueError('Wrong value for state')
 
         counter = 0
-        threshold_date = self.threshold_datetime(weeks=weeks)
+        if not until:
+            until = self.last_commit_datetime()
+        since = self.threshold_datetime(until=until, days=days)
+
         for pull in pulls:
-            if pull.created_at < threshold_date:
+            if until > pull.created_at > since:
                 counter += 1
         return counter
 
-    def pulls_count_open(self, weeks: int = 104) -> int:
-        return self.pulls_count(state='open', weeks=weeks)
+    def pulls_count_open(
+        self, until: Optional[datetime] = None, days: int = 730,
+    ) -> int:
+        return self.pulls_count(state='open', until=until, days=days)
 
-    def pulls_count_closed(self, weeks: int = 104) -> int:
-        return self.pulls_count(state='closed', weeks=weeks)
+    def pulls_count_closed(
+            self, until: Optional[datetime] = None, days: int = 730,
+    ) -> int:
+        return self.pulls_count(state='closed', until=until, days=days)
 
-    def issues_count(self, state: str = 'open', weeks: int = 104) -> int:
+    def issues_count(
+        self, until: Optional[datetime] = None, days: int = 730,
+        state: str = 'open'
+    ) -> int:
         if state == 'open' or state == 'closed':
             issues = self._repo.get_issues(state=state)
         else:
             raise ValueError('Wrong value for state')
 
         counter = 0
-        threshold_date = self.threshold_datetime(weeks=weeks)
+        if not until:
+            until = self.last_commit_datetime()
+        since = self.threshold_datetime(until=until, days=days)
+
         for issue in issues:
-            if issue.created_at < threshold_date:
+            if until > issue.created_at > since:
                 counter += 1
         return counter
 
-    def issues_count_open(self, weeks: int = 104) -> int:
-        return self.issues_count(state='open', weeks=weeks)
+    def issues_count_open(
+        self, until: Optional[datetime] = None, days: int = 730,
+    ) -> int:
+        return self.issues_count(state='open', until=until, days=days)
 
-    def issues_count_closed(self, weeks: int = 104) -> int:
-        return self.issues_count(state='closed', weeks=weeks)
+    def issues_count_closed(
+            self, until: Optional[datetime] = None, days: int = 730,
+    ) -> int:
+        return self.issues_count(state='closed', until=until, days=days)
 
-    def commits_count(self, weeks: int = 104) -> int:
-        threshold_date = self.threshold_datetime(weeks=weeks)
-        return len(list(self._repo.get_commits(since=threshold_date)))
+    def commits_count(
+            self, until: Optional[datetime] = None, days: int = 730
+    ) -> int:
+        if not until:
+            until = self.last_commit_datetime()
+        since = self.threshold_datetime(until=until, days=days)
+        return len(list(self._repo.get_commits(until=until, since=since)))
 
     def branches_count(self) -> int:
         return len(list(self._repo.get_branches()))
 
-    def releases_count(self, weeks: int = 104) -> int:
+    def releases_count(
+        self, until: Optional[datetime] = None, days: int = 730
+    ) -> int:
         releases = self._repo.get_releases()
+
+        if not until:
+            until = self.last_commit_datetime()
+        since = self.threshold_datetime(until=until, days=days)
+
         counter = 0
-        threshold_date = self.threshold_datetime(weeks=weeks)
         for release in releases:
-            if release.created_at < threshold_date:
+            if until > release.created_at > since:
                 counter += 1
         return counter
 
@@ -118,19 +148,9 @@ class RepositoryData:
             COMMIT_LAST_MODIFIED_FORMAT
         )
 
-    def threshold_datetime(self, weeks: int = 104) -> datetime:
-        if weeks == 0:
-            date = self._repo.created_at
-        else:
-            date = datetime.now().date() - relativedelta(weeks=weeks)
-        return datetime.combine(date, datetime.min.time())
-
-    def threshold_date(self, weeks: int = 104) -> datetime:
-        if weeks == 0:
-            date = self._repo.created_at
-        else:
-            date = datetime.now().date() - relativedelta(weeks=weeks)
-        return date
+    @classmethod
+    def threshold_datetime(cls, until: datetime, days: int) -> datetime:
+        return until - relativedelta(days=days)
 
     def owner_type(self) -> AccountType:
         owner_type = self._repo.owner.type
@@ -149,11 +169,6 @@ class RepositoryData:
 
     def stargazers_count(self) -> int:
         return self._repo.stargazers_count
-
-    def age(self) -> int:
-        present_date = datetime.now().date()
-        created_date = self._repo.created_at.date()
-        return (present_date - created_date).days
 
     def owner_account_age(self) -> int:
         return self.datetime_to_days(dtime=self._repo.owner.created_at)
@@ -176,34 +191,6 @@ class RepositoryData:
             return 0
         else:
             return collective_age / contributors_count
-
-    def documentation_changes_frequency(self, weeks: int = 104) -> float:
-        threshold_date = self.threshold_datetime(weeks=weeks)
-        commits = list(self._repo.get_commits(since=threshold_date))
-        counter = 0
-        for commit in commits:
-            file_names = [file.filename for file in commit.files]
-            for file_name in file_names:
-                if 'README' in file_name:
-                    counter += 1
-
-        return counter / len(commits)
-
-    def documentation_changes_additions(self, weeks: int = 104) -> float:
-        threshold_date = self.threshold_datetime(weeks=weeks)
-        commits = list(self._repo.get_commits(since=threshold_date))
-        counter = 0
-        additions = 0
-        for commit in commits:
-            files = [file for file in commit.files]
-            for file in files:
-                if 'README' in file.filename:
-                    counter += 1
-                    additions += file.additions - file.deletions
-
-        if counter == 0:
-            return 0
-        return additions / counter
 
     @staticmethod
     def _filter_dirs(dirs: List[str]) -> List[str]:
@@ -325,13 +312,19 @@ class RepositoryData:
         return contr_dict[max_contriburor]
 
     def _contributors_divided(
-        self, threshold: int = 104
+        self, threshold: int = 730
     ) -> Tuple[Set[str], Set[str]]:
-        threshold_date = self.threshold_datetime(weeks=threshold)
-        commits_before = self._repo.get_commits(until=threshold_date)
-        commits_after = self._repo.get_commits(since=threshold_date)
+        until = self.last_commit_datetime()
+        threshold_datetime = self.threshold_datetime(
+            until=until, days=threshold
+        )
+
+        commits_before = self._repo.get_commits(until=threshold_datetime)
+        commits_after = self._repo.get_commits(since=threshold_datetime)
+
         contributors_old = set()
         contributors_new = set()
+
         for commit in commits_before:
             name = commit.commit.author.name
             if name not in contributors_old:
@@ -344,7 +337,7 @@ class RepositoryData:
 
         return contributors_new, contributors_old
 
-    def magnetism(self, threshold: int = 104) -> float:
+    def magnetism(self, threshold: int = 730) -> float:
         new, old = self._contributors_divided(threshold=threshold)
         if len(old) == 0:
             return 0
@@ -356,12 +349,14 @@ class RepositoryData:
         return datetime.combine(date, datetime.min.time())
 
     def stickiness(
-            self, new_threshold: int = 104, sticky_threshold: int = 52
+            self, new_threshold: int = 730, sticky_threshold: int = 365
     ) -> float:
         new, _ = self._contributors_divided(threshold=new_threshold)
-        commits_after = self._repo.get_commits(
-            since=self._days_to_datetime(sticky_threshold)
-        )
+
+        until = self.last_commit_datetime()
+        since = self.threshold_datetime(until=until, days=sticky_threshold)
+        commits_after = self._repo.get_commits(since=since)
+
         contributors_sticked = set()
 
         for commit in commits_after:
@@ -383,47 +378,13 @@ class RepositoryData:
                 return commit.commit.author.date
         return None
 
-    # not used - too much computation time
-    def health(self) -> float:
-        contributors = self._repo.get_contributors()
-        cont_workforces = []
-        for contributor in contributors:
-            cont_date = self._contributor_joined_datetime(
-                contributor=contributor
-            )
-            if not cont_date:
-                raise ValueError('Some error')
-            e = self.datetime_to_days(dtime=cont_date) / 30
-            labor = 0.0
-            j = 0
-            workforce = 0.0
-            since_date = cont_date
-            until_date = cont_date + timedelta(days=30)
-            today = datetime.now()
+    def wealth(
+        self, until: Optional[datetime] = None, days: int = 730,
+    ) -> float:
+        if not until:
+            until = self.last_commit_datetime()
+        threshold_date = self.threshold_datetime(until=until, days=days)
 
-            commits = list(self._repo.get_commits())
-
-            while until_date < today:
-                for commit in commits:
-                    added = datetime.strptime(
-                        commit.last_modified, COMMIT_LAST_MODIFIED_FORMAT
-                    )
-                    if since_date < added < until_date:
-                        additions = commit.stats.additions
-                        deletions = commit.stats.deletions
-                        labor += additions - deletions
-
-                j += 1
-                since_date = until_date
-                until_date += timedelta(days=30)
-
-                workforce += labor / (e - j + 1)
-
-            cont_workforces.append(workforce)
-        return sum(cont_workforces) / len(cont_workforces)
-
-    def wealth(self, weeks: int = 104) -> float:
-        threshold_date = self.threshold_datetime(weeks=weeks)
         prs = self._repo.get_pulls(state='closed')
         relevant_prs = [pr for pr in prs if pr.created_at > threshold_date]
         wealth = 0.0
@@ -489,8 +450,9 @@ class RepositoryData:
     def archived(self) -> bool:
         return self._repo.archived
 
-    def commit_in_weeks(self, weeks: int = 104) -> bool:
-        threshold_date = self.threshold_datetime(weeks=weeks)
+    def commit_in_days(self, days: int = 730) -> bool:
+        now = datetime.now()
+        threshold_date = self.threshold_datetime(until=now, days=days)
         commits = list(self._repo.get_commits(since=threshold_date))
         return bool(len(commits))
 
@@ -501,7 +463,7 @@ class RepositoryData:
 
     def suitable(self) -> bool:
         try:
-            if self.age() < 730:
+            if self.development_time() < 730:
                 return False
             if not self.in_programming_language():
                 return False
@@ -512,7 +474,7 @@ class RepositoryData:
         return True
 
     def unmaintained(self) -> bool:
-        return not self.commit_in_weeks(weeks=52) or \
+        return not self.commit_in_days(days=365) or \
             self.archived() or self.unmaintained_in_readme()
 
     def repo_name(self) -> str:
