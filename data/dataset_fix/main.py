@@ -1,7 +1,6 @@
 
 from csv import reader as csv_reader, writer as csv_writer
-from datetime import datetime
-from typing import List, Tuple
+from typing import List
 
 from data_gathering import GIT_INSTANCE
 from data_gathering.logger import setup_logger
@@ -9,7 +8,7 @@ from data_gathering.repository_data import RepositoryData
 from data_gathering.waiting import NoAPICalls, wait_for_api_calls
 
 from github import (
-    Github, GithubException, RateLimitExceededException, UnknownObjectException
+    GithubException, RateLimitExceededException, UnknownObjectException
 )
 
 
@@ -104,9 +103,8 @@ for dataset in datasets:
 
             except RateLimitExceededException:
                 logger.info(msg='Github API rate limit reached')
-                wait_for_api_calls(
-                    git=GIT_INSTANCE, number_of_attempts=10, logger=logger
-                )
+                git = wait_for_api_calls(number_of_attempts=10, logger=logger)
+                rd = RepositoryData(git=git)
                 continue
             except UnknownObjectException:
                 logger.debug(msg='Unknown object')
