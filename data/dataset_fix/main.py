@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 from data_gathering import GIT_INSTANCE
 from data_gathering.logger import setup_logger
+from data_gathering.repository_data import RepositoryData
 from data_gathering.waiting import NoAPICalls, wait_for_api_calls
 
 from github import (
@@ -27,47 +28,16 @@ def save_matrix(
 
 def save_all() -> None:
     save_matrix(
-        file_name=f'dataset_fix/dataset/{dataset}_extended.csv',
-        matrix=matrix_extended, append=True
+        file_name=f'dataset_fix/dataset/{dataset}_updated.csv',
+        matrix=matrix_updated, append=True
     )
     save_matrix(
-        file_name=f'dataset_fix/dataset/{dataset}_updated.csv',
+        file_name=f'dataset_fix/dataset/{dataset}.csv',
         matrix=matrix
     )
 
 
-def suitable(git: Github, repo_name: str) -> Tuple[int, bool]:
-    if 'dotfile' in repo_name:
-        return 1, False
-
-    repo = git.get_repo(full_name_or_id=repo_name)
-
-    # if len(list(repo.get_commits())) < 20:
-    #     return 2, False
-    if len(list(repo.get_contributors())) < 3:
-        return 3, False
-
-    return 0, True
-
-
 COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
-
-
-def repository_age_in_days(git: Github, repo_name: str) -> int:
-    repo = git.get_repo(full_name_or_id=repo_name)
-    commits = repo.get_commits()
-
-    first_commit = datetime.strptime(
-        commits.reversed[0].last_modified,
-        COMMIT_LAST_MODIFIED_FORMAT
-    )
-
-    last_commit = datetime.strptime(
-        commits[0].last_modified,
-        COMMIT_LAST_MODIFIED_FORMAT
-    )
-
-    return (last_commit - first_commit).days
 
 
 not_suitable_counter = {
@@ -91,10 +61,12 @@ for dataset in datasets:
     ) as input_csv_file:
         reader = csv_reader(input_csv_file, delimiter=',')
         matrix = list(reader)
-        matrix_extended = []
+        matrix_updated = []
 
         rows_count = len(matrix)
         row_counter = 0
+
+        rd = RepositoryData(git=GIT_INSTANCE)
 
     try:
         for row in matrix[1:]:
@@ -104,12 +76,24 @@ for dataset in datasets:
                     msg=f'Started computing repository: {row[0]}, row: {row_counter} / {rows_count}'
                 )
 
-                time_delta = repository_age_in_days(
-                    git=GIT_INSTANCE, repo_name=row[0]
-                )
+                #  last_commit_age    productive_duration
+                if (row[29] > 180) or (row[30] < 730):
+                    del matrix[1]
+                    continue
 
-                matrix[1].append(time_delta)
-                matrix_extended.append(matrix[1])
+                rd.set_repo(repo_name_or_id=row[0])
+
+                matrix[1][2] = rd.pulls_count_open()
+                matrix[1][3] = rd.pulls_count_closed()
+                matrix[1][4] = rd.issues_count_open()
+                matrix[1][5] = rd.issues_count_closed()
+                matrix[1][6] = rd.commits_count()
+                matrix[1][8] = rd.releases_count()
+                matrix[1][26] = rd.magnetism()
+                matrix[1][27] = rd.stickiness()
+                matrix[1][28] = rd.wealth()
+
+                matrix_updated.append(matrix[1])
 
                 del matrix[1]
 
