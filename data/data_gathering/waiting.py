@@ -5,7 +5,7 @@ from time import sleep
 
 from github import Github
 
-from data_gathering import GIT_INSTANCE, GIT_INSTANCE_PETIN
+from data_gathering import GITHUB_INSTANCES
 
 
 class NoAPICalls(Exception):
@@ -18,20 +18,31 @@ def wait_for_api_calls(
 
     for i in range(number_of_attempts):
 
-        if GIT_INSTANCE.get_rate_limit().core.remaining > 0:
-            git = GIT_INSTANCE
-        elif GIT_INSTANCE_PETIN.get_rate_limit().core.remaining > 0:
-            git = GIT_INSTANCE_PETIN
+        remaining_calls = [
+            g.get_rate_limit().core.remaining for g in GITHUB_INSTANCES
+        ]
+        max_calls = max(remaining_calls)
+
+        if max_calls > 0:
+            max_calls_index = remaining_calls.index(max_calls)
+            git = GITHUB_INSTANCES[max_calls_index]
+            logger.debug(msg=f'Using GIT_INSTANCE {max_calls_index} : >calls')
+
+            return git
         else:
-            if GIT_INSTANCE.rate_limiting_resettime < GIT_INSTANCE_PETIN.rate_limiting_resettime:
-                git = GIT_INSTANCE
-            else:
-                git = GIT_INSTANCE
+            remaining_times = [
+                g.rate_limiting_resettime for g in GITHUB_INSTANCES
+            ]
+            min_reset = min(remaining_time)
+            min_reset_index = remaining_times.index(min_reset)
+
+            git = GITHUB_INSTANCES[min_reset_index]
+            logger.debug(msg=f'Using GIT_INSTANCE {min_reset_index} : <time')
 
         waiting_time = time_to_wait(timestamp=git.rate_limiting_resettime) + 60
 
-        if waiting_time > 1800:
-            waiting_time = 1800
+        if waiting_time > 300:
+            waiting_time = 300
 
         logger.info(msg=f'Waiting for {waiting_time / 60} minutes')
         sleep(waiting_time)
