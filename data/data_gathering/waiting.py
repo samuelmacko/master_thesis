@@ -17,7 +17,6 @@ def wait_for_api_calls(
 ) -> Github:
 
     for i in range(number_of_attempts):
-
         remaining_calls = [
             g.get_rate_limit().core.remaining for g in GITHUB_INSTANCES
         ]

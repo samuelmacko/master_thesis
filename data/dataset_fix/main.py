@@ -43,7 +43,8 @@ logger = setup_logger(
     level='DEBUG'
 )
 
-datasets = ['unmaintained']
+datasets = ['maintained', 'unmaintained']
+
 for dataset in datasets:
     logger.info(msg=f'Started computing {dataset} dataset')
 
