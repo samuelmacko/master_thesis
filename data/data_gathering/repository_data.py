@@ -467,19 +467,25 @@ class RepositoryData:
 
     def suitable(self) -> bool:
         try:
-            if self.development_time() < 730:
-                return False
-            if not self.in_programming_language():
-                return False
-            if self.incorrectly_migrated():
+            if (
+                self.development_time() < 730 or
+                not self.in_programming_language() or
+                self.incorrectly_migrated()
+            ):
                 return False
         except ValueError:
             return False
         return True
 
     def unmaintained(self) -> bool:
-        return not self.commit_in_days(days=365) or \
-            self.archived() or self.unmaintained_in_readme()
+        if (
+            'dotfile' in self.repo_name() or
+            len(list(self._repo.get_contributors())) < 3 or
+            self.archived() or
+            self.unmaintained_in_readme() or
+            not self.commit_in_days(days=365)
+        ):
+            return True
 
     def repo_name(self) -> str:
         return self._repo.full_name

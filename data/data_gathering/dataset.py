@@ -1,7 +1,7 @@
 
 from csv import writer
 from datetime import date, datetime, timedelta
-from logging import Logger
+from logging import getLogger, Logger
 from marshal import dump, load
 from pathlib import Path
 from random import randrange, sample
@@ -50,7 +50,12 @@ class Dataset:
             dump(ids_set, f)
 
     @staticmethod
-    def load_visited_ids(dat_file: str, logger: Logger) -> Optional[Set[int]]:
+    def load_visited_ids(
+            dat_file: str, logger: Optional[Logger] = None
+    ) -> Optional[Set[int]]:
+        if not logger:
+            logger = getLogger('dummy')
+
         try:
             with open(file=dat_file, mode='rb') as f:
                 try:
@@ -116,10 +121,10 @@ class Dataset:
             file_names += other_files
 
         self.save_all(file_set_tuples=file_set_tuples, logger=logger)
-        self.upload_all(
-            file_name_prefix=file_name_prefix, file_names=file_names,
-            region_name=region_name, logger=logger
-        )
+        # self.upload_all(
+        #     file_name_prefix=file_name_prefix, file_names=file_names,
+        #     region_name=region_name, logger=logger
+        # )
 
     @staticmethod
     def already_visited(
@@ -162,13 +167,13 @@ class Dataset:
             format=logger_config_values['format'],
             level=logger_config_values['level']
         )
-        self.download_all(
-            file_names=[
-                unmaintained_ids_file, maintained_ids_file,
-                not_suitable_ids_file
-            ], region_name=region_name, file_name_prefix=file_name_prefix,
-            logger=logger
-        )
+        # self.download_all(
+        #     file_names=[
+        #         unmaintained_ids_file, maintained_ids_file,
+        #         not_suitable_ids_file
+        #     ], region_name=region_name, file_name_prefix=file_name_prefix,
+        #     logger=logger
+        # )
         unmaintained_ids = self.load_visited_ids(
             dat_file=unmaintained_ids_file, logger=logger
         )
@@ -178,10 +183,16 @@ class Dataset:
         not_suitable_ids = self.load_visited_ids(
             dat_file=not_suitable_ids_file, logger=logger
         )
+
+        main_names = self.load_visited_ids(
+            dat_file='main_names.dat', logger=logger
+        )
+
         file_set_tuples = [
             (unmaintained_ids_file, unmaintained_ids),
             (maintained_ids_file, maintained_ids),
-            (not_suitable_ids_file, not_suitable_ids)
+            (not_suitable_ids_file, not_suitable_ids),
+            ('main_names.dat', main_names)
         ]
 
         from_year_date = datetime.strptime(from_year, '%Y').date()
@@ -203,20 +214,23 @@ class Dataset:
                     )
                     logger.debug(msg=f'random date: {random_date}')
                     repos_ids = self.get_random_repos_ids(
-                        query=query.format(date=random_date), n=5
+                        query=query.format(date=random_date), n=100
                     )
 
                     for repo_id in repos_ids:
-                        if self.already_visited(
-                                repo_id=repo_id, id_sets=[
-                                    unmaintained_ids, maintained_ids,
-                                    not_suitable_ids
-                                ]
-                        ):
-                            continue
+                        # if self.already_visited(
+                        #         repo_id=repo_id, id_sets=[
+                        #             unmaintained_ids, maintained_ids,
+                        #             not_suitable_ids
+                        #         ]
+                        # ):
+                        #     continue
 
                         repo = self._git.get_repo(full_name_or_id=repo_id)
                         repo_data.set_repo(repo=repo)
+
+                        if (repo_name := repo.name) in main_names:
+                            continue
 
                         if repo_data.suitable():
                             if repo_data.unmaintained():
@@ -229,10 +243,11 @@ class Dataset:
                                 )
                             else:
                                 maintained_ids.add(repo_id)
+                                main_names.add(repo_name)
                                 maintained_count += 1
                                 logger.info(
-                                    msg='Added maintained repo ID: ' +
-                                        f'{repo_id}, ' +
+                                    msg='Added maintained repo name: ' +
+                                        f'{repo_name}, ' +
                                         f'rank: {maintained_count}'
                                 )
                         else:
