@@ -4,7 +4,7 @@ from typing import List
 
 from data_gathering.logger import setup_logger
 from data_gathering.repository_data import RepositoryData
-from data_gathering.waiting import NoAPICalls, wait_for_api_calls
+from data_gathering.waiting import get_git_instance, NoAPICalls
 
 from github import (
     GithubException, RateLimitExceededException, UnknownObjectException
@@ -58,7 +58,7 @@ for dataset in datasets:
         rows_count = len(matrix)
         row_counter = 0
 
-        git = wait_for_api_calls(number_of_attempts=10, logger=logger)
+        git = get_git_instance(number_of_attempts=10, logger=logger)
         rd = RepositoryData(git=git)
 
     try:
@@ -107,7 +107,7 @@ for dataset in datasets:
 
             except RateLimitExceededException:
                 logger.info(msg='Github API rate limit reached')
-                git = wait_for_api_calls(number_of_attempts=10, logger=logger)
+                git = get_git_instance(number_of_attempts=10, logger=logger)
                 rd = RepositoryData(git=git)
             except UnknownObjectException:
                 logger.debug(msg='Unknown object')

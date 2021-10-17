@@ -16,7 +16,7 @@ from github.NamedUser import NamedUser
 from github.Repository import Repository
 
 from .enums import AccountType
-from .waiting import wait_for_api_calls
+from .waiting import get_git_instance
 
 
 COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
@@ -24,8 +24,12 @@ COMMIT_LAST_MODIFIED_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
 
 class RepositoryData:
 
-    def __init__(self, git: Github) -> None:
-        self._git: Github = git
+    def __init__(self, git: Optional[Github] = None) -> None:
+        if git:
+            self._git: Github = git
+        else:
+            self._git: Github = get_git_instance()
+
         self._repo: Optional[Repository] = None
 
         self._files = None
@@ -511,8 +515,8 @@ class RepositoryData:
                     feature_index += 1
 
                 logger.info(msg='Github API rate limit reached')
-                wait_for_api_calls(
-                    git=self._git, number_of_attempts=10, logger=logger
+                self._git = get_git_instance(
+                    number_of_attempts=10, logger=logger
                 )
                 continue
         return row

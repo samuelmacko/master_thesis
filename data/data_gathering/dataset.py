@@ -8,23 +8,23 @@ from random import randrange, sample
 from typing import Any, List, Optional, Set, Tuple
 from yaml import safe_load
 
-from github import Github, PaginatedList, Repository
+from github import Github
 from github.GithubException import (
     GithubException, RateLimitExceededException, UnknownObjectException
 )
 
-from data_gathering import GIT_INSTANCE, logger_config_values
+from data_gathering import logger_config_values
 from .enums import EndCondition
 from .logger import logger_file_name, setup_logger
 from .repository_data import RepositoryData
 from .s3_handler import S3Handler
-from .waiting import NoAPICalls, wait_for_api_calls
+from .waiting import get_git_instance, NoAPICalls
 
 
 class Dataset:
 
     def __init__(self) -> None:
-        self._git: Github = GIT_INSTANCE
+        self._git: Github = get_git_instance()
 
     @staticmethod
     def load_features(features_file: str) -> List[str]:
@@ -253,8 +253,8 @@ class Dataset:
 
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
-                    wait_for_api_calls(
-                        git=self._git, number_of_attempts=10, logger=logger
+                    self._git = get_git_instance(
+                        number_of_attempts=10, logger=logger
                     )
                     continue
                 except UnknownObjectException:
@@ -343,8 +343,8 @@ class Dataset:
                         )
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
-                    wait_for_api_calls(
-                        git=self._git, number_of_attempts=10, logger=logger
+                    self._git = get_git_instance(
+                        number_of_attempts=10, logger=logger
                     )
                     continue
                 except UnknownObjectException:

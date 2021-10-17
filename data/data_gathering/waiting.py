@@ -1,7 +1,8 @@
 
 from datetime import datetime
-from logging import Logger
+from logging import getLogger, Logger
 from time import sleep
+from typing import Optional
 
 from github import Github
 
@@ -12,9 +13,11 @@ class NoAPICalls(Exception):
     pass
 
 
-def wait_for_api_calls(
-    logger: Logger, number_of_attempts: int = 3
+def get_git_instance(
+    logger: Optional[Logger] = None, number_of_attempts: int = 3
 ) -> Github:
+    if not logger:
+        logger = getLogger('dummy')
 
     for i in range(number_of_attempts):
         remaining_calls = [
@@ -32,7 +35,7 @@ def wait_for_api_calls(
             remaining_times = [
                 g.rate_limiting_resettime for g in GITHUB_INSTANCES
             ]
-            min_reset = min(remaining_time)
+            min_reset = min(remaining_times)
             min_reset_index = remaining_times.index(min_reset)
 
             git = GITHUB_INSTANCES[min_reset_index]
