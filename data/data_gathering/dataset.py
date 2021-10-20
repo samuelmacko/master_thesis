@@ -271,6 +271,7 @@ class Dataset:
                     self._git = get_git_instance(
                         number_of_attempts=10, logger=logger
                     )
+                    repo_data = RepositoryData(git=self._git)
                     continue
                 except UnknownObjectException:
                     not_suitable_ids.add(repo_id)
@@ -305,11 +306,11 @@ class Dataset:
                 format=logger_config_values['format'],
                 level=logger_config_values['level']
             )
-            self.download_all(
-                file_names=[ids_file_name, csv_file_name],
-                region_name=region_name, file_name_prefix=file_name_prefix,
-                logger=logger
-            )
+            # self.download_all(
+            #     file_names=[ids_file_name, csv_file_name],
+            #     region_name=region_name, file_name_prefix=file_name_prefix,
+            #     logger=logger
+            # )
 
             repo_data = RepositoryData(git=self._git)
             features = self.load_features(features_file=features_file)
@@ -350,20 +351,24 @@ class Dataset:
                     if repo_computed_counter == partial_upload_size:
                         repo_computed_counter = 0
                         logger.info(msg='Partial upload')
-                        self.upload_all(
-                            file_names=[csv_file_name, logger_file],
-                            region_name=region_name,
-                            file_name_prefix=file_name_prefix,
-                            logger=logger
-                        )
+                        # self.upload_all(
+                        #     file_names=[csv_file_name, logger_file],
+                        #     region_name=region_name,
+                        #     file_name_prefix=file_name_prefix,
+                        #     logger=logger
+                        # )
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
                     self._git = get_git_instance(
                         number_of_attempts=10, logger=logger
                     )
+                    repo_data = RepositoryData(git=self._git)
                     continue
                 except UnknownObjectException:
                     logger.info(msg='Encountered a removed repository')
+                    continue
+                except GithubException:
+                    logger.info(msg='Encoutered an incomplete repository')
                     continue
                 except NoAPICalls:
                     logger.info(msg='API calls were not granted')

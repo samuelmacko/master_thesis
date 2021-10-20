@@ -469,13 +469,14 @@ class RepositoryData:
         try:
             if (
                 self.development_time() < 730 or
-                not self.in_programming_language() or
-                self.incorrectly_migrated()
+                not self.in_programming_language()
+                # self.incorrectly_migrated()
             ):
                 return False
+            else:
+                return True
         except ValueError:
             return False
-        return True
 
     def unmaintained(self) -> bool:
         if (
@@ -486,6 +487,8 @@ class RepositoryData:
             not self.commit_in_days(days=365)
         ):
             return True
+        else:
+            return False
 
     def repo_name(self) -> str:
         return self._repo.full_name
