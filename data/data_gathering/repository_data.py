@@ -397,6 +397,8 @@ class RepositoryData:
             if days_to_close == 0:
                 days_to_close = 1
             months_to_close = ceil(days_to_close / 30)
+            if months_to_close == 0:
+                return 0
             wealth += 1 / months_to_close
         return wealth
 

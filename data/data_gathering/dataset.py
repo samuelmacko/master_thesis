@@ -5,6 +5,8 @@ from logging import getLogger, Logger
 from marshal import dump, load
 from pathlib import Path
 from random import randrange, sample
+from requests.exceptions import ConnectionError, ReadTimeout
+from time import sleep
 from typing import Any, List, Optional, Set, Tuple
 from yaml import safe_load
 
@@ -282,6 +284,10 @@ class Dataset:
                 except GithubException:
                     logger.info(msg='Encoutered an incomplete repository')
                     continue
+                except ReadTimeout:
+                    logger.info(msg='Newtwork issue')
+                    sleep(10)
+                    continue
                 except NoAPICalls:
                     logger.info(msg='API calls were not granted')
                     return
@@ -312,6 +318,10 @@ class Dataset:
             #     logger=logger
             # )
 
+            unmain_names = self.load_visited_ids(
+                dat_file='unmain_names.dat', logger=logger
+            )
+
             repo_data = RepositoryData(git=self._git)
             features = self.load_features(features_file=features_file)
             repo_computed_counter = 0
@@ -334,6 +344,11 @@ class Dataset:
                 try:
                     logger.info(msg=f'Computing repo: {repo_id}')
                     repo_data.set_repo(repo_name_or_id=repo_id)
+
+                    if repo_data.repo_name() in unmain_names:
+                        logger.info(msg='Duplicate repo')
+                        continue
+
                     self.write_to_csv(
                         data=repo_data.get_row(
                             features=features, logger=logger
@@ -369,6 +384,10 @@ class Dataset:
                     continue
                 except GithubException:
                     logger.info(msg='Encoutered an incomplete repository')
+                    continue
+                except (ReadTimeout, ConnectionError):
+                    logger.info(msg='Newtwork issue')
+                    sleep(10)
                     continue
                 except NoAPICalls:
                     logger.info(msg='API calls were not granted')
