@@ -69,32 +69,13 @@ for dataset in datasets:
                     msg=f'Started computing repository: {row[0]}, row: {row_counter} / {rows_count}'
                 )
 
-                #  last_commit_age         productive_duration
-                # if (int(row[29]) > 180) or (int(row[30]) < 730):
-                if int(row[30]) < 730:
-                    del matrix[1]
-                    continue
+                if row[26] == 'ph':
+                    rd.set_repo(repo_name_or_id=row[0])
 
-                rd.set_repo(repo_name_or_id=row[0])
-
-                logger.debug(msg='Computing feature number: 2')
-                matrix[1][2] = rd.pulls_count_open()
-                logger.debug(msg='Computing feature number: 3')
-                matrix[1][3] = rd.pulls_count_closed()
-                logger.debug(msg='Computing feature number: 4')
-                matrix[1][4] = rd.issues_count_open()
-                logger.debug(msg='Computing feature number: 5')
-                matrix[1][5] = rd.issues_count_closed()
-                logger.debug(msg='Computing feature number: 6')
-                matrix[1][6] = rd.commits_count()
-                logger.debug(msg='Computing feature number: 8')
-                matrix[1][8] = rd.releases_count()
-                logger.debug(msg='Computing feature number: 26')
-                matrix[1][26] = rd.magnetism()
-                logger.debug(msg='Computing feature number: 27')
-                matrix[1][27] = rd.stickiness()
-                logger.debug(msg='Computing feature number: 28')
-                matrix[1][28] = rd.wealth()
+                    logger.debug(msg='Computing magnetism')
+                    matrix[1][26] = rd.magnetism()
+                    logger.debug(msg='Computing stickiness')
+                    matrix[1][27] = rd.stickiness()
 
                 matrix_updated.append(matrix[1])
 

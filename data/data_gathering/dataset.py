@@ -318,8 +318,8 @@ class Dataset:
             #     logger=logger
             # )
 
-            unmain_names = self.load_visited_ids(
-                dat_file='unmain_names.dat', logger=logger
+            processed_names = self.load_visited_ids(
+                dat_file='main_names.dat', logger=logger
             )
 
             repo_data = RepositoryData(git=self._git)
@@ -345,7 +345,7 @@ class Dataset:
                     logger.info(msg=f'Computing repo: {repo_id}')
                     repo_data.set_repo(repo_name_or_id=repo_id)
 
-                    if repo_data.repo_name() in unmain_names:
+                    if repo_data.repo_name() in processed_names:
                         logger.info(msg='Duplicate repo')
                         continue
 

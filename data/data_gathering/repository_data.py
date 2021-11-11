@@ -217,7 +217,9 @@ class RepositoryData:
         i = 0
         while i < len(dirs):
             subdirs = self._filter_dirs(dirs=[
-                dir_name.path for dir_name in self._repo.get_contents(path=dirs[i])
+                dir_name.path for dir_name in self._repo.get_contents(
+                    path=dirs[i]
+                )
                 if dir_name.type == 'dir'
             ])
             dirs += subdirs
