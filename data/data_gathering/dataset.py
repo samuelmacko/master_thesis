@@ -123,10 +123,10 @@ class Dataset:
             file_names += other_files
 
         self.save_all(file_set_tuples=file_set_tuples, logger=logger)
-        # self.upload_all(
-        #     file_name_prefix=file_name_prefix, file_names=file_names,
-        #     region_name=region_name, logger=logger
-        # )
+        self.upload_all(
+            file_name_prefix=file_name_prefix, file_names=file_names,
+            region_name=region_name, logger=logger
+        )
 
     @staticmethod
     def already_visited(
@@ -169,13 +169,13 @@ class Dataset:
             format=logger_config_values['format'],
             level=logger_config_values['level']
         )
-        # self.download_all(
-        #     file_names=[
-        #         unmaintained_ids_file, maintained_ids_file,
-        #         not_suitable_ids_file
-        #     ], region_name=region_name, file_name_prefix=file_name_prefix,
-        #     logger=logger
-        # )
+        self.download_all(
+            file_names=[
+                unmaintained_ids_file, maintained_ids_file,
+                not_suitable_ids_file
+            ], region_name=region_name, file_name_prefix=file_name_prefix,
+            logger=logger
+        )
         unmaintained_ids = self.load_visited_ids(
             dat_file=unmaintained_ids_file, logger=logger
         )
@@ -220,13 +220,6 @@ class Dataset:
                     )
 
                     for repo_id in repos_ids:
-                        # if self.already_visited(
-                        #         repo_id=repo_id, id_sets=[
-                        #             unmaintained_ids, maintained_ids,
-                        #             not_suitable_ids
-                        #         ]
-                        # ):
-                        #     continue
 
                         repo = self._git.get_repo(full_name_or_id=repo_id)
                         repo_data.set_repo(repo=repo)
@@ -312,11 +305,11 @@ class Dataset:
                 format=logger_config_values['format'],
                 level=logger_config_values['level']
             )
-            # self.download_all(
-            #     file_names=[ids_file_name, csv_file_name],
-            #     region_name=region_name, file_name_prefix=file_name_prefix,
-            #     logger=logger
-            # )
+            self.download_all(
+                file_names=[ids_file_name, csv_file_name],
+                region_name=region_name, file_name_prefix=file_name_prefix,
+                logger=logger
+            )
 
             processed_names = self.load_visited_ids(
                 dat_file='main_names.dat', logger=logger
@@ -366,12 +359,12 @@ class Dataset:
                     if repo_computed_counter == partial_upload_size:
                         repo_computed_counter = 0
                         logger.info(msg='Partial upload')
-                        # self.upload_all(
-                        #     file_names=[csv_file_name, logger_file],
-                        #     region_name=region_name,
-                        #     file_name_prefix=file_name_prefix,
-                        #     logger=logger
-                        # )
+                        self.upload_all(
+                            file_names=[csv_file_name, logger_file],
+                            region_name=region_name,
+                            file_name_prefix=file_name_prefix,
+                            logger=logger
+                        )
                 except RateLimitExceededException:
                     logger.info(msg='Github API rate limit reached')
                     self._git = get_git_instance(

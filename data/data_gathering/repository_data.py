@@ -474,7 +474,6 @@ class RepositoryData:
             if (
                 self.development_time() < 730 or
                 not self.in_programming_language()
-                # self.incorrectly_migrated()
             ):
                 return False
             else:
@@ -485,7 +484,6 @@ class RepositoryData:
     def unmaintained(self) -> bool:
         if (
             'dotfile' in self.repo_name() or
-            len(list(self._repo.get_contributors())) < 3 or
             self.archived() or
             self.unmaintained_in_readme() or
             not self.commit_in_days(days=365)

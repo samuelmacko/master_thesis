@@ -13,7 +13,7 @@ search_repos:
 
   queries:
     maintained: 'created:{date} pushed:>2020-10-01 archived:false'
-    unmaintained: 'created:{date} pushed:<2020-01-01'
+    unmaintained: 'created:{date} pushed:<2020-10-01 pushed:>2015-01-01'
 
 compute_features:
   features: 'configs/features.yml'
