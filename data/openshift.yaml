@@ -111,7 +111,7 @@ objects:
   - apiVersion: batch/v1
     kind: Job
     metadata:
-      name: sm-master-thesis-search
+      name: sm-master-thesis-search-maint
       labels:
         app: samuelmacko-master-thesis
     spec:
@@ -125,7 +125,44 @@ objects:
           automountServiceAccountToken: false
           containers:
             - name: main
-              image: samuelmacko-master-thesis-search
+              image: samuelmacko-master-thesis-search-maint
+              env:
+                - name: GITHUB_ACCESS_TOKEN
+                  value: "${GITHUB_ACCESS_TOKEN_UNMAINT}"
+                - name: AWS_ACCESS_KEY_ID
+                  value: "${AWS_ACCESS_KEY_ID}"
+                - name: AWS_SECRET_ACCESS_KEY
+                  value: "${AWS_SECRET_ACCESS_KEY}"
+                - name: BUCKET_NAME
+                  value: "${BUCKET_NAME}"
+                - name: ENDPOINT_URL
+                  value: "${ENDPOINT_URL}"
+              resources:
+                limits:
+                  memory: "2Gi"
+                  cpu: 1
+                requests:
+                  memory: "2Gi"
+                  cpu: 1
+
+  - apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: sm-master-thesis-search-unmaint
+      labels:
+        app: samuelmacko-master-thesis
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: samuelmacko-master-thesis
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          containers:
+            - name: main
+              image: samuelmacko-master-thesis-search-unmaint
               env:
                 - name: GITHUB_ACCESS_TOKEN
                   value: "${GITHUB_ACCESS_TOKEN_UNMAINT}"
@@ -161,7 +198,7 @@ objects:
     metadata:
       labels:
         app: samuelmacko-master-thesis
-      name: samuelmacko-master-thesis-unmaintained
+      name: samuelmacko-master-thesis-unmaint
     spec:
       name: latest
       lookupPolicy:
@@ -172,7 +209,18 @@ objects:
     metadata:
       labels:
         app: samuelmacko-master-thesis
-      name: samuelmacko-master-thesis-search
+      name: samuelmacko-master-thesis-search-maint
+    spec:
+      name: latest
+      lookupPolicy:
+        local: true
+
+  - kind: ImageStream
+    apiVersion: image.openshift.io/v1
+    metadata:
+      labels:
+        app: samuelmacko-master-thesis
+      name: samuelmacko-master-thesis-search-unmaint
     spec:
       name: latest
       lookupPolicy:
@@ -191,6 +239,7 @@ objects:
           name: samuelmacko-master-thesis-maintained:latest
       source:
         type: Git
+        contextDir: data
         git:
           uri: https://github.com/samuelmacko/master_thesis
           ref: master
@@ -208,16 +257,17 @@ objects:
   - kind: BuildConfig
     apiVersion: build.openshift.io/v1
     metadata:
-      name: samuelmacko-master-thesis-search
+      name: samuelmacko-master-thesis-search-maint
       labels:
         app: samuelmacko-master-thesis
     spec:
       output:
         to:
           kind: ImageStreamTag
-          name: samuelmacko-master-thesis-search:latest
+          name: samuelmacko-master-thesis-search-maint:latest
       source:
         type: Git
+        contextDir: data
         git:
           uri: https://github.com/samuelmacko/master_thesis
           ref: master
@@ -230,7 +280,35 @@ objects:
           cpu: 1
       strategy:
         dockerStrategy:
-          dockerfilePath: Dockerfile.search_repos
+          dockerfilePath: Dockerfile.search_repos-maintained
+
+  - kind: BuildConfig
+    apiVersion: build.openshift.io/v1
+    metadata:
+      name: samuelmacko-master-thesis-search-unmaint
+      labels:
+        app: samuelmacko-master-thesis
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: samuelmacko-master-thesis-search-unmaint:latest
+      source:
+        type: Git
+        contextDir: data
+        git:
+          uri: https://github.com/samuelmacko/master_thesis
+          ref: master
+      resources:
+        limits:
+          memory: 1Gi
+          cpu: 1
+        requests:
+          memory: 1Gi
+          cpu: 1
+      strategy:
+        dockerStrategy:
+          dockerfilePath: Dockerfile.search_repos-unmaintained
 
   - kind: BuildConfig
     apiVersion: build.openshift.io/v1
@@ -245,6 +323,7 @@ objects:
           name: samuelmacko-master-thesis-unmaintained:latest
       source:
         type: Git
+        contextDir: data
         git:
           uri: https://github.com/samuelmacko/master_thesis
           ref: master
